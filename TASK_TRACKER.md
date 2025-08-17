@@ -36,13 +36,13 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create monorepo structure following specification | 🔴 | 2h | ❌ | | None | Day 1 |
-| [MVP] Set up services/web-gateway directory structure | 🔴 | 1h | ❌ | | Task 1 | Day 1 |
-| [MVP] Set up services/auth-service directory structure | 🔴 | 1h | ❌ | | Task 1 | Day 1 |
-| [MVP] Set up services/order-service directory structure | 🔴 | 1h | ❌ | | Task 1 | Day 1 |
-| [MVP] Initialize pyproject.toml for web-gateway using UV | 🔴 | 1h | ❌ | | Task 2 | Day 1 |
-| [MVP] Initialize pyproject.toml for auth-service using UV | 🔴 | 1h | ❌ | | Task 3 | Day 1 |
-| [MVP] Initialize pyproject.toml for order-service using UV | 🔴 | 1h | ❌ | | Task 4 | Day 1 |
+| [MVP] Create monorepo structure following specification | 🔴 | 2h | ✅ | | None | Day 1 |
+| [MVP] Set up services/web-gateway directory structure | 🔴 | 1h | ✅ | | Task 1 | Day 1 |
+| [MVP] Set up services/auth-service directory structure | 🔴 | 1h | ✅ | | Task 1 | Day 1 |
+| [MVP] Set up services/order-service directory structure | 🔴 | 1h | ✅ | | Task 1 | Day 1 |
+| [MVP] Initialize pyproject.toml for web-gateway using UV | 🔴 | 1h | ✅ | | Task 2 | Day 1 |
+| [MVP] Initialize pyproject.toml for auth-service using UV | 🔴 | 1h | ✅ | | Task 3 | Day 1 |
+| [MVP] Initialize pyproject.toml for order-service using UV | 🔴 | 1h | ✅ | | Task 4 | Day 1 |
 
 **Acceptance Criteria**:
 - [ ] Monorepo structure matches specification exactly
@@ -57,14 +57,14 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create PostgreSQL init.sql for auth service schema | 🔴 | 2h | ❌ | | None | Day 2 |
-| [MVP] Create PostgreSQL init.sql for order service schema | 🔴 | 2h | ❌ | | Task 1 | Day 2 |
+| [MVP] Create PostgreSQL init.sql for auth service schema | 🔴 | 2h | ✅ | | None | Day 2 |
+| [MVP] Create PostgreSQL init.sql for order service schema | 🔴 | 2h | ✅ | | Task 1 | Day 2 |
 | Set up Valkey configuration for session management | 🔴 | 1h | ❌ | | None | Day 2 |
-| [MVP] Create base Dockerfile for auth-service | 🔴 | 1.5h | ❌ | | 1.1 Complete | Day 2 |
-| [MVP] Create base Dockerfile for order-service | 🔴 | 1.5h | ❌ | | 1.1 Complete | Day 2 |
-| [MVP] Create base Dockerfile for web-gateway | 🔴 | 1.5h | ❌ | | 1.1 Complete | Day 2 |
-| [MVP] Create Docker Compose with PostgreSQL (Valkey optional for MVP) | 🔴 | 2h | ❌ | | Tasks 1-3 | Day 3 |
-| [BACKLOG] Add health checks for all services | 🟡 | 1h | ❌ | | Task 7 | Day 3 |
+| [MVP] Create base Dockerfile for auth-service | 🔴 | 1.5h | ✅ | | 1.1 Complete | Day 2 |
+| [MVP] Create base Dockerfile for order-service | 🔴 | 1.5h | ✅ | | 1.1 Complete | Day 2 |
+| [MVP] Create base Dockerfile for web-gateway | 🔴 | 1.5h | ✅ | | 1.1 Complete | Day 2 |
+| [MVP] Create Docker Compose with PostgreSQL (Valkey optional for MVP) | 🔴 | 2h | ✅ | | Tasks 1-3 | Day 3 |
+| [BACKLOG] Add health checks for all services | 🟡 | 1h | ✅ | | Task 7 | Day 3 |
 | [BACKLOG] Configure service networking and discovery | 🔴 | 0.5h | ❌ | | Task 7 | Day 3 |
 
 **Acceptance Criteria**:
@@ -87,7 +87,7 @@ Quick checklist to follow:
 | Configure pytest with coverage for order-service | 🟡 | 1h | ❌ | | Task 3 | Day 3 |
 | [BACKLOG] Configure pytest with coverage for web-gateway | 🟡 | 1h | ❌ | | Task 4 | Day 3 |
 | Set up pre-commit hooks | 🟡 | 0.5h | ❌ | | Tasks 1-2 | Day 4 |
-| Create Makefile with development shortcuts | 🟡 | 1.5h | ❌ | | All above | Day 4 |
+| Create Makefile with development shortcuts | 🟡 | 1.5h | ✅ | | All above | Day 4 |
 | [BACKLOG] Configure security scanning with Trivy | 🟡 | 1h | ❌ | | 1.2 Complete | Day 4 |
 
 **Acceptance Criteria**:
@@ -104,7 +104,7 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create comprehensive .env.example file | 🔴 | 1h | ❌ | | None | Day 4 |
+| [MVP] Create comprehensive .env.example file | 🔴 | 1h | ✅ | | None | Day 4 |
 | Set up environment variable validation | 🔴 | 1h | ❌ | | Task 1 | Day 4 |
 | Generate secure default secrets for development | 🔴 | 0.5h | ❌ | | Task 1 | Day 4 |
 | Configure Structlog logging framework | 🔴 | 1h | ❌ | | Task 1 | Day 5 |
@@ -448,7 +448,7 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create complete user journey test script (smoke) | 🔴 | 3h | ❌ | | Phase 4 Complete | Day 31 |
+| [MVP] Create complete user journey test script (smoke) | 🔴 | 3h | 🟡 | | Phase 4 Complete | Day 31 |
 | [BACKLOG] Implement cross-service integration tests | 🔴 | 4h | ❌ | | Task 1 | Day 32 |
 | [BACKLOG] Add browser automation tests with Playwright | 🟡 | 4h | ❌ | | Task 2 | Day 32 |
 | [BACKLOG] Create load testing for 100 concurrent users | 🟡 | 3h | ❌ | | Task 3 | Day 33 |

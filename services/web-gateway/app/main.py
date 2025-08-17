@@ -1,6 +1,13 @@
-def main():
-    print("Hello from web-gateway!")
+from fastapi import FastAPI
+
+app = FastAPI(title="web-gateway")
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "web-gateway"}
+
+
+@app.get("/")
+async def root():
+    return {"message": "web-gateway running"}

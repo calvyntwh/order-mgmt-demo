@@ -44,6 +44,11 @@ services:
         condition: service_healthy
     ports:
       - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   order-service:
     build: ./services/order-service
@@ -59,6 +64,11 @@ services:
         condition: service_started
     ports:
       - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web-gateway:
     build: ./services/web-gateway
@@ -77,6 +87,11 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
