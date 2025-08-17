@@ -148,13 +148,7 @@ Notes:
 - [ ] Configure pytest with coverage reporting
 - [ ] Set up pre-commit hooks
 - [ ] Create Makefile with development shortcuts
-- [ ] Configure security scanning with Trivy
- - [ ] [MVP] Configure Ruff for code formatting and linting
- - [ ] [MVP] Set up BasedPyright for type checking
- - [ ] Configure pytest with coverage reporting
- - [ ] Set up pre-commit hooks
- - [ ] Create Makefile with development shortcuts
- - [ ] [BACKLOG] Configure security scanning with Trivy
+- [ ] [BACKLOG] Configure security scanning with Trivy
 
 **Acceptance Criteria**:
 - All linting and formatting tools work across all services
@@ -177,11 +171,6 @@ Notes:
 - [ ] Generate secure default secrets for development
 - [ ] Configure logging framework (Structlog)
 - [ ] Set up request ID propagation middleware
- - [ ] [MVP] Create comprehensive `.env.example` file
- - [ ] Set up environment variable validation
- - [ ] Generate secure default secrets for development
- - [ ] Configure logging framework (Structlog)
- - [ ] Set up request ID propagation middleware
 
 **Acceptance Criteria**:
 - All environment variables are documented and validated
@@ -228,11 +217,6 @@ Notes:
 - [ ] Implement proper JWT claims structure
 - [ ] Set up token expiration and refresh logic
 - [ ] Create secure random secret generation
- - [ ] [MVP] Implement bcrypt password hashing with cost factor 12
- - [ ] [MVP] Create JWT token generation and validation
- - [ ] Implement proper JWT claims structure
- - [ ] Set up token expiration and refresh logic
- - [ ] Create secure random secret generation
 
 **Acceptance Criteria**:
 - Passwords are hashed with bcrypt cost factor 12
@@ -275,13 +259,8 @@ Notes:
 - [ ] Implement OAuth2 password flow for login (for MVP a simple token flow is acceptable)
 - [ ] [MVP] Create token verification endpoint
 - [ ] [MVP] Implement logout functionality (simple token/session clear for MVP)
-- [ ] Add rate limiting for login attempts (5 per minute)
+- [ ] [BACKLOG] Add rate limiting for login attempts (5 per minute)
 - [ ] Create proper HTTP status codes and error responses
- - [ ] Implement OAuth2 password flow for login (for MVP a simple token flow is acceptable)
- - [ ] [MVP] Create token verification endpoint
- - [ ] [MVP] Implement logout functionality (simple token/session clear for MVP)
- - [ ] [BACKLOG] Add rate limiting for login attempts (5 per minute)
- - [ ] Create proper HTTP status codes and error responses
 
 **Acceptance Criteria**:
 - OAuth2 password flow works correctly
@@ -328,11 +307,6 @@ Notes:
 - [ ] Set up foreign key relationships with User service
 - [ ] Implement timestamp tracking for audit trail
 - [ ] Create database indexes for performance
- - [ ] [MVP] Implement Order SQLModel with proper validation
- - [ ] [MVP] Create OrderStatus enum (PENDING, APPROVED, REJECTED)
- - [ ] Set up foreign key relationships with User service
- - [ ] Implement timestamp tracking for audit trail
- - [ ] Create database indexes for performance
 
 **Acceptance Criteria**:
 - Order model matches specification (UUID, user_id, item_name, quantity, notes, status, timestamps)
@@ -352,14 +326,9 @@ Notes:
 #### Tasks:
 - [ ] [MVP] Implement order creation with proper validation
 - [ ] [MVP] Create user order history retrieval
-- [ ] Add filtering and pagination for order lists
+- [ ] [BACKLOG] Add filtering and pagination for order lists
 - [ ] [MVP] Implement order status updates for admin actions
 - [ ] Add comprehensive error handling
- - [ ] [MVP] Implement order creation with proper validation
- - [ ] [MVP] Create user order history retrieval
- - [ ] [BACKLOG] Add filtering and pagination for order lists
- - [ ] [MVP] Implement order status updates for admin actions
- - [ ] Add comprehensive error handling
 
 **Acceptance Criteria**:
 - Order creation validates item_name (1-255 chars), quantity (1-100), notes (max 1000 chars)
@@ -401,14 +370,9 @@ Notes:
 #### Tasks:
 - [ ] [MVP] Implement admin dashboard data retrieval (minimal)
 - [ ] [MVP] Create order approval/rejection endpoints
-- [ ] Add search functionality by username
-- [ ] Implement CSV export functionality
-- [ ] Add order statistics and reporting
- - [ ] [MVP] Implement admin dashboard data retrieval (minimal)
- - [ ] [MVP] Create order approval/rejection endpoints
- - [ ] [BACKLOG] Add search functionality by username
- - [ ] [BACKLOG] Implement CSV export functionality
- - [ ] [BACKLOG] Add order statistics and reporting
+- [ ] [BACKLOG] Add search functionality by username
+- [ ] [BACKLOG] Implement CSV export functionality
+- [ ] [BACKLOG] Add order statistics and reporting
 
 **Acceptance Criteria**:
 - Admin dashboard shows all orders with user context
@@ -428,14 +392,9 @@ Notes:
 #### Tasks:
 - [ ] [MVP] Create comprehensive unit tests for all order functions
 - [ ] Implement integration tests with mocked auth service
-- [ ] Add performance tests for order list operations
-- [ ] Optimize database queries and indexing
+- [ ] [BACKLOG] Add performance tests for order list operations
+- [ ] [BACKLOG] Optimize database queries and indexing
 - [ ] Add error handling and resilience testing
- - [ ] [MVP] Create comprehensive unit tests for all order functions
- - [ ] Implement integration tests with mocked auth service
- - [ ] [BACKLOG] Add performance tests for order list operations
- - [ ] [BACKLOG] Optimize database queries and indexing
- - [ ] Add error handling and resilience testing
 
 **Acceptance Criteria**:
 - 90%+ test coverage on order management flows
@@ -455,16 +414,11 @@ Notes:
 **Estimated Effort**: 1.5 days
 
 #### Tasks:
-- [ ] Implement Valkey connection and session storage
+- [ ] [BACKLOG] Implement Valkey connection and session storage
 - [ ] Create session middleware for FastAPI
 - [ ] Add session security (HttpOnly, Secure, SameSite cookies)
 - [ ] Implement session expiration and sliding window
 - [ ] Add CSRF protection with double-submit pattern
- - [ ] [BACKLOG] Implement Valkey connection and session storage
- - [ ] Create session middleware for FastAPI
- - [ ] Add session security (HttpOnly, Secure, SameSite cookies)
- - [ ] Implement session expiration and sliding window
- - [ ] Add CSRF protection with double-submit pattern
 
 **Acceptance Criteria**:
 - Sessions are stored in Valkey with 1-hour TTL
@@ -483,15 +437,11 @@ Notes:
 
 #### Tasks:
 - [ ] [MVP] Create base Jinja2 template with Bulma CSS
-- [ ] Set up Alpine.js for client-side interactivity
+- [ ] [BACKLOG] Set up Alpine.js for client-side interactivity
 - [ ] Create navigation component
 - [ ] Implement flash message system
 - [ ] Set up static asset serving
- - [ ] [MVP] Create base Jinja2 template with Bulma CSS
- - [ ] [BACKLOG] Set up Alpine.js for client-side interactivity
- - [ ] Create navigation component
- - [ ] Implement flash message system
- - [ ] Set up static asset serving
+
 
 **Acceptance Criteria**:
 - Base template includes Bulma CSS and Alpine.js
@@ -513,12 +463,7 @@ Notes:
 - [ ] [MVP] Implement login form with proper error handling
 - [ ] Add logout functionality
 - [ ] Create password strength indicator
-- [ ] Implement form validation with Alpine.js
- - [ ] [MVP] Create registration form with client-side validation
- - [ ] [MVP] Implement login form with proper error handling
- - [ ] Add logout functionality
- - [ ] Create password strength indicator
- - [ ] [BACKLOG] Implement form validation with Alpine.js
+- [ ] [BACKLOG] Implement form validation with Alpine.js
 
 **Acceptance Criteria**:
 - Registration form validates username (4-20 chars) and password (8+ chars)
@@ -537,15 +482,10 @@ Notes:
 
 #### Tasks:
 - [ ] [MVP] Create order creation form with HTMX submission (for MVP simple form-post is acceptable)
-- [ ] Implement order history page with filtering
-- [ ] Add real-time status updates with HTMX
-- [ ] Create admin dashboard with order management
-- [ ] Implement pagination and search UI
- - [ ] [MVP] Create order creation form with HTMX submission (for MVP simple form-post is acceptable)
- - [ ] [BACKLOG] Implement order history page with filtering
- - [ ] [BACKLOG] Add real-time status updates with HTMX
- - [ ] [BACKLOG] Create admin dashboard with order management
- - [ ] [BACKLOG] Implement pagination and search UI
+- [ ] [BACKLOG] Implement order history page with filtering
+- [ ] [BACKLOG] Add real-time status updates with HTMX
+- [ ] [BACKLOG] Create admin dashboard with order management
+- [ ] [BACKLOG] Implement pagination and search UI
 
 **Acceptance Criteria**:
 - Order forms submit via HTMX without page reloads
@@ -563,16 +503,11 @@ Notes:
 **Estimated Effort**: 1 day
 
 #### Tasks:
-- [ ] [MVP] Implement API proxying to Auth and Order services
+- [ ] [BACKLOG] Implement API proxying to Auth and Order services
 - [ ] Add proper error handling and user feedback
 - [ ] Create service health monitoring
 - [ ] Implement request/response logging
 - [ ] Add timeout and retry logic
- - [ ] [BACKLOG] Implement API proxying to Auth and Order services
- - [ ] Add proper error handling and user feedback
- - [ ] Create service health monitoring
- - [ ] Implement request/response logging
- - [ ] Add timeout and retry logic
 
 **Acceptance Criteria**:
 - All backend calls are properly proxied through gateway
@@ -593,15 +528,10 @@ Notes:
 
 #### Tasks:
 - [ ] [MVP] Create complete user journey tests (register→login→order→approve)
-- [ ] Implement cross-service integration tests
-- [ ] Add browser automation tests for UI flows
-- [ ] Create load testing for concurrent users
-- [ ] Implement chaos testing for service resilience
- - [ ] [MVP] Create complete user journey tests (register→login→order→approve)
- - [ ] [BACKLOG] Implement cross-service integration tests
- - [ ] [BACKLOG] Add browser automation tests for UI flows
- - [ ] [BACKLOG] Create load testing for concurrent users
- - [ ] [BACKLOG] Implement chaos testing for service resilience
+- [ ] [BACKLOG] Implement cross-service integration tests
+- [ ] [BACKLOG] Add browser automation tests for UI flows
+- [ ] [BACKLOG] Create load testing for concurrent users
+- [ ] [BACKLOG] Implement chaos testing for service resilience
 
 **Acceptance Criteria**:
 - Complete user journey completes in <60 seconds
@@ -619,16 +549,11 @@ Notes:
 **Estimated Effort**: 1.5 days
 
 #### Tasks:
-- [ ] Run comprehensive security scans with Trivy
-- [ ] Implement input sanitization and XSS prevention
-- [ ] Add SQL injection testing and prevention
-- [ ] Perform penetration testing on authentication
-- [ ] Audit and fix all security vulnerabilities
- - [ ] [BACKLOG] Run comprehensive security scans with Trivy
- - [ ] [BACKLOG] Implement input sanitization and XSS prevention
- - [ ] [BACKLOG] Add SQL injection testing and prevention
- - [ ] [BACKLOG] Perform penetration testing on authentication
- - [ ] [BACKLOG] Audit and fix all security vulnerabilities
+- [ ] [BACKLOG] Run comprehensive security scans with Trivy
+- [ ] [BACKLOG] Implement input sanitization and XSS prevention
+- [ ] [BACKLOG] Add SQL injection testing and prevention
+- [ ] [BACKLOG] Perform penetration testing on authentication
+- [ ] [BACKLOG] Audit and fix all security vulnerabilities
 
 **Acceptance Criteria**:
 - Zero HIGH/CRITICAL vulnerabilities in Trivy scans
@@ -646,16 +571,11 @@ Notes:
 **Estimated Effort**: 1 day
 
 #### Tasks:
-- [ ] Optimize database queries and indexing
-- [ ] Implement connection pooling and caching
-- [ ] Optimize API response times
-- [ ] Reduce memory usage across services
-- [ ] Optimize container startup times
- - [ ] [BACKLOG] Optimize database queries and indexing
- - [ ] [BACKLOG] Implement connection pooling and caching
- - [ ] [BACKLOG] Optimize API response times
- - [ ] [BACKLOG] Reduce memory usage across services
- - [ ] [BACKLOG] Optimize container startup times
+- [ ] [BACKLOG] Optimize database queries and indexing
+- [ ] [BACKLOG] Implement connection pooling and caching
+- [ ] [BACKLOG] Optimize API response times
+- [ ] [BACKLOG] Reduce memory usage across services
+- [ ] [BACKLOG] Optimize container startup times
 
 **Acceptance Criteria**:
 - Service startup time <2 seconds
@@ -673,16 +593,11 @@ Notes:
 **Estimated Effort**: 1.5 days
 
 #### Tasks:
-- [ ] Implement comprehensive structured logging
-- [ ] Add request tracing across services
-- [ ] Create health check endpoints
-- [ ] Add metrics collection and monitoring
-- [ ] Implement log aggregation and analysis
- - [ ] [BACKLOG] Implement comprehensive structured logging
- - [ ] [BACKLOG] Add request tracing across services
- - [ ] [BACKLOG] Create health check endpoints
- - [ ] [BACKLOG] Add metrics collection and monitoring
- - [ ] [BACKLOG] Implement log aggregation and analysis
+- [ ] [BACKLOG] Implement comprehensive structured logging
+- [ ] [BACKLOG] Add request tracing across services
+- [ ] [BACKLOG] Create health check endpoints
+- [ ] [BACKLOG] Add metrics collection and monitoring
+- [ ] [BACKLOG] Implement log aggregation and analysis
 
 **Acceptance Criteria**:
 - All actions are logged with structured data
@@ -703,15 +618,10 @@ Notes:
 
 #### Tasks:
 - [ ] [MVP] Create detailed README with setup instructions
-- [ ] Document API specifications and contracts
-- [ ] Create architecture documentation with diagrams
-- [ ] Write troubleshooting and FAQ guides
-- [ ] Document security considerations and best practices
- - [ ] [MVP] Create detailed README with setup instructions
- - [ ] [BACKLOG] Document API specifications and contracts
- - [ ] [BACKLOG] Create architecture documentation with diagrams
- - [ ] [BACKLOG] Write troubleshooting and FAQ guides
- - [ ] [BACKLOG] Document security considerations and best practices
+- [ ] [BACKLOG] Document API specifications and contracts
+- [ ] [BACKLOG] Create architecture documentation with diagrams
+- [ ] [BACKLOG] Write troubleshooting and FAQ guides
+- [ ] [BACKLOG] Document security considerations and best practices
 
 **Acceptance Criteria**:
 - README enables quick setup and demo in <5 minutes
@@ -731,14 +641,9 @@ Notes:
 #### Tasks:
 - [ ] Create demo script for stakeholder presentation
 - [ ] Prepare sample data and test scenarios
-- [ ] Create presentation slides explaining architecture
+- [ ] [BACKLOG] Create presentation slides explaining architecture
 - [ ] Document key features and benefits
 - [ ] Prepare troubleshooting scenarios
- - [ ] Create demo script for stakeholder presentation
- - [ ] Prepare sample data and test scenarios
- - [ ] [BACKLOG] Create presentation slides explaining architecture
- - [ ] Create document key features and benefits
- - [ ] Prepare troubleshooting scenarios
 
 **Acceptance Criteria**:
 - Demo script completes full user journey in <60 seconds
