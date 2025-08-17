@@ -205,3 +205,88 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ----------------------------
+# macOS & common OS files
+# ----------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.localized
+
+# ----------------------------
+# Python / UV / virtualenvs / env files
+# ----------------------------
+.python-version
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.env
+.env.*
+.env.local
+.env.dev
+.env.test
+.pytest_cache/
+.pyright/
+.mypy_cache/
+.venv
+
+# uv / lock files
+uv.lock
+
+# ----------------------------
+# Docker / Compose / Volumes
+# ----------------------------
+.env.compose
+.env.docker
+volumes/
+*.log
+
+# Ignore local docker volumes created by compose
+**/volumes/
+
+# ----------------------------
+# Editors / IDEs
+# ----------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*~
+
+# ----------------------------
+# Build / Dist / Node / Misc
+# ----------------------------
+dist/
+build/
+node_modules/
+coverage/
+htmlcov/
+tmp/
+
+# ----------------------------
+# Repo-specific: service-level virtualenvs and artifacts
+# ----------------------------
+/services/*/venv/
+/services/*/.venv/
+/services/*/dist/
+/services/*/build/
+/services/*/coverage/
+
+# Local sqlite and DB files
+**/*.db
+
+# Keys and secrets
+*.pem
+*.key
+secrets.yml
+
+# Keep important repo files
+!README.md
+!LICENSE
