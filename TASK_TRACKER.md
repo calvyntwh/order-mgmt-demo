@@ -213,8 +213,8 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Implement admin user creation from env vars | 🔴 | 2h | ❌ | | 2.4 Complete | Day 12 |
-| Create idempotent bootstrap process | 🔴 | 1h | ❌ | | Task 1 | Day 13 |
+| [MVP] Implement admin user creation from env vars | 🔴 | 2h | ✅ Complete | | 2.4 Complete | Day 12 |
+| Create idempotent bootstrap process | 🔴 | 1h | ✅ Complete | | Task 1 | Day 13 |
 | Add unit tests for password hashing | 🟡 | 1h | ❌ | | 2.2 Complete | Day 13 |
 | Add unit tests for JWT token operations | 🟡 | 2h | ❌ | | Task 3 | Day 13 |
 | Add unit tests for user registration | 🟡 | 1h | ❌ | | Task 4 | Day 13 |
