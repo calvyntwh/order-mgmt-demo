@@ -49,10 +49,12 @@ Quick checklist to follow:
 
 **Acceptance Criteria**:
 
-- [ ] Monorepo structure matches specification exactly
-- [ ] Each service has proper Python 3.13 + UV configuration
-- [ ] All pyproject.toml files include required dependencies
-- [ ] Directory structure follows naming conventions
+	- [x] Monorepo structure matches specification exactly
+	- [x] Each service has proper Python 3.13 + UV configuration
+	- [x] All pyproject.toml files include required dependencies
+	- [x] Directory structure follows naming conventions
+
+	Verification: Confirmed in `services/*/pyproject.toml` — each file sets `requires-python = ">=3.13"` and includes `uvicorn[standard]` and core deps; service folders: `services/web-gateway`, `services/auth-service`, `services/order-service`.
 
 ---
 
