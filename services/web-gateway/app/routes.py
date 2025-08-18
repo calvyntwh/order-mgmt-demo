@@ -1,7 +1,7 @@
-import httpx
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+import httpx  # type: ignore
+from fastapi import APIRouter, HTTPException, Request  # type: ignore
+from fastapi.responses import RedirectResponse  # type: ignore
+from fastapi.templating import Jinja2Templates  # type: ignore
 
 from .auth_proxy import introspect
 
@@ -20,7 +20,14 @@ async def create_order(request: Request):
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
-        return r.json(), r.status_code
+        try:
+            payload = r.json()
+        except Exception:
+            payload = None
+        # Normalize id to string if present
+        if isinstance(payload, dict) and payload.get("id") is not None:
+            payload["id"] = str(payload["id"])
+        return payload, r.status_code
 
 
 @router.get("/orders")
@@ -30,7 +37,16 @@ async def list_orders(request: Request):
     user_id = request.cookies.get("user_id") or "demo"  # fallback for MVP
     async with httpx.AsyncClient() as client:
         r = await client.get(f"{ORDER_URL}/orders/user/{user_id}", headers=headers)
-        return r.json(), r.status_code
+        try:
+            payload = r.json()
+        except Exception:
+            payload = []
+        # Normalize any returned order ids to strings
+        if isinstance(payload, list):
+            for o in payload:
+                if isinstance(o, dict) and o.get("id") is not None:
+                    o["id"] = str(o["id"])
+        return payload, r.status_code
 
 
 @router.post("/register")

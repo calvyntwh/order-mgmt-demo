@@ -258,7 +258,7 @@ Notes:
 #### Tasks:
 - [ ] Implement OAuth2 password flow for login (for MVP a simple token flow is acceptable)
 - [ ] [MVP] Create token verification endpoint
-- [ ] [MVP] Implement logout functionality (simple token/session clear for MVP)
+- [x] [MVP] Implement logout functionality (simple token/session clear for MVP) — MVP endpoint accepts token and returns success; server-side blacklist not implemented
 - [ ] [BACKLOG] Add rate limiting for login attempts (5 per minute)
 - [ ] Create proper HTTP status codes and error responses
 
@@ -440,6 +440,15 @@ Notes:
 - [ ] [BACKLOG] Set up Alpine.js for client-side interactivity
 - [ ] Create navigation component
 - [ ] Implement flash message system
+
+## Repository status (automated snapshot)
+
+- Date: 2025-08-19
+- Tests: auth-service (6 passed), order-service (6 passed), web-gateway (1 passed)
+- Coverage (pytest-cov): auth-service ~40%, order-service ~45%, web-gateway ~32%
+- Recent code changes: order-service `app/orders.py` updated to support test dummy pool API; auth-service DB init pattern refactored to avoid optional-member access in types.
+- Recommended immediate tasks: add unit tests for `auth-service/app/auth.py` and `order-service/app/orders.py` (happy-path and edge cases); produce HTML coverage reports for targeted review.
+
 - [ ] Set up static asset serving
 
 

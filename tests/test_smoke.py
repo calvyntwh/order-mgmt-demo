@@ -1,6 +1,6 @@
 import os
-import httpx
-import pytest
+import httpx # type: ignore
+import pytest # type: ignore
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 ORDER_URL = os.getenv("ORDER_SERVICE_URL", "http://localhost:8002")
@@ -20,10 +20,12 @@ async def test_happy_path():
         r = await client.post(f"{ORDER_URL}/orders/", json={"item_name": "widget", "quantity": 2}, headers=headers)
         assert r.status_code == 201
         order_id = r.json()["id"]
+        # ensure string form
+        order_id = str(order_id)
         # List user orders
         r = await client.get(f"{ORDER_URL}/orders/user/demo", headers=headers)
         assert r.status_code == 200
-        assert any(o["id"] == order_id for o in r.json())
+        assert any(str(o["id"]) == order_id for o in r.json())
         # Admin approve order (simulate admin)
         admin_token = os.getenv("ADMIN_TOKEN", token)
         admin_headers = {"Authorization": f"Bearer {admin_token}"}

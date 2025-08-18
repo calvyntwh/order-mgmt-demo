@@ -6,7 +6,7 @@ It is intended as a developer convenience and is not executed by the assistant.
 import os
 import asyncio
 
-import httpx
+import httpx # type: ignore
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8000")
 ORDER_URL = os.getenv("ORDER_SERVICE_URL", "http://localhost:8001")
@@ -25,6 +25,10 @@ async def run_smoke():
         # create order
         r = await client.post(f"{ORDER_URL}/orders/", json={"item_name": "smoke-item", "quantity": 1}, headers=headers)
         print("create order:", r.status_code, r.text)
+        order_id = r.json().get("id")
+        if order_id is not None:
+            order_id = str(order_id)
+            print("created order id:", order_id)
 
 
 if __name__ == "__main__":

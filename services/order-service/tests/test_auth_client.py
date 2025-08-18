@@ -1,10 +1,11 @@
-import asyncio
 import httpx
 import pytest
+
 from app import auth_client
 
 
-async def test_introspect_token(monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.asyncio
+async def test_introspect_token(monkeypatch):
     class DummyResponse:
         def __init__(self, data):
             self._data = data
@@ -28,9 +29,7 @@ async def test_introspect_token(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
 
     res = await auth_client.introspect_token("fake-token")
-    assert res["username"] == "tester"
-    assert res["is_admin"] is False
-
-
-def test_run():
-    asyncio.run(test_introspect_token(None))
+    if res["username"] != "tester":
+        raise AssertionError(f"Expected username 'tester', got {res['username']}")
+    if res["is_admin"] is not False:
+        raise AssertionError(f"Expected is_admin False, got {res['is_admin']}")

@@ -1,5 +1,6 @@
+import httpx
 from fastapi import FastAPI
-from httpx import AsyncClient
+from fastapi.testclient import TestClient
 
 from app.routes import router as routes_router
 
@@ -7,7 +8,7 @@ app = FastAPI()
 app.include_router(routes_router)
 
 
-async def test_whoami(monkeypatch):
+def test_whoami(monkeypatch):
     # Dummy response from auth proxy
     class DummyResponse:
         def __init__(self, data):
@@ -29,12 +30,12 @@ async def test_whoami(monkeypatch):
         async def get(self, *args, **kwargs):
             return DummyResponse({"sub": "u1", "username": "tester", "is_admin": False})
 
-    import httpx
-
     monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        r = await ac.get("/whoami", headers={"Authorization": "Bearer fake"})
-        assert r.status_code == 200
-        body = r.json()
-        assert body["username"] == "tester"
+    client = TestClient(app)
+    r = client.get("/whoami", headers={"Authorization": "Bearer fake"})
+    if r.status_code != 200:
+        raise AssertionError(f"Expected status 200, got {r.status_code}")
+    data = r.json()
+    if data["username"] != "tester":
+        raise AssertionError(f"Expected username 'tester', got {data['username']}")

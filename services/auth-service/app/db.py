@@ -1,8 +1,9 @@
 import os
 
-import asyncpg  # type: ignore
+from psycopg import AsyncConnection  # type: ignore
+from psycopg_pool import AsyncConnectionPool  # type: ignore
 
-_pool: asyncpg.pool.Pool | None = None
+_pool: AsyncConnectionPool[AsyncConnection] | None = None  # type: ignore[reportUnknownVariableType]
 
 
 async def init_db_pool() -> None:
@@ -10,17 +11,22 @@ async def init_db_pool() -> None:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL not set")
-    _pool = await asyncpg.create_pool(database_url, min_size=1, max_size=5)
+    pool = AsyncConnectionPool(database_url, min_size=1, max_size=5, open=False)
+    await pool.open()  # type: ignore[reportUnknownMemberType]
+    _pool = pool
 
 
-def get_db_pool() -> asyncpg.pool.Pool:
-    if _pool is None:
-        raise RuntimeError("DB pool not initialized")
-    return _pool
+def get_db_pool() -> AsyncConnectionPool[AsyncConnection] | None:
+    pool = _pool
+    if not isinstance(pool, AsyncConnectionPool):
+        return None
+    if hasattr(pool, "open") and getattr(pool, "open", False):  # type: ignore[reportUnknownMemberType]
+        return pool  # type: ignore[reportUnknownVariableType]
+    return None  # type: ignore[reportUnknownParameterType]
 
 
 async def close_db_pool() -> None:
     global _pool
     if _pool is not None:
-        await _pool.close()
+        await _pool.close()  # type: ignore[reportUnknownMemberType]
         _pool = None

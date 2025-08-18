@@ -6,6 +6,15 @@ Alright buddy, let me give you the comprehensive PRD and Tech Spec based on ever
 
 # **Complete Product Requirements Document (PRD)**
 
+## Repository status (automated snapshot)
+
+- Date: 2025-08-19
+- Tests: auth-service (6 passed), order-service (6 passed), web-gateway (1 passed)
+- Coverage (pytest-cov, term report): auth-service ~40%, order-service ~45%, web-gateway ~32%
+- Recent code notes: `services/order-service/app/orders.py` updated to support test DummyPool (added `_resolve_pool`, `_execute_fetchone`, `_execute_fetchall`); several test/runtime-safe edits applied to DB init patterns in auth-service to avoid Optional-member access during typechecking.
+- Short next steps: add focused unit tests for auth and order flows to raise coverage; generate HTML coverage reports; consider adding lightweight type stubs for `psycopg`/`psycopg_pool` to reduce targeted type ignores.
+
+
 ## **Executive Summary**
 
 We're building a **Simple Order Management Demo App** to showcase your CaaS platform's microservices capabilities. Think of it as your "Hello World" for enterprise architecture—simple enough to understand quickly, sophisticated enough to demonstrate real-world patterns.

@@ -1,5 +1,6 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 
 from .db import close_db_pool, init_db_pool
 from .orders import router as orders_router

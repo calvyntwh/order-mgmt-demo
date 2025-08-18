@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
+from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel  # type: ignore
 
 
 class OrderStatus(str, Enum):
@@ -11,7 +14,7 @@ class OrderStatus(str, Enum):
 
 
 class Order(SQLModel, table=True):
-    id: str | None = Field(default=None, primary_key=True)
+    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     user_id: str = Field(index=True)
     item_name: str
     quantity: int
@@ -20,3 +23,14 @@ class Order(SQLModel, table=True):
     created_at: datetime | None = Field(default=None)
     updated_at: datetime | None = Field(default=None)
     admin_action_at: datetime | None = Field(default=None)
+
+
+class OrderCreate(SQLModel):
+    """Pydantic/SQLModel input model for creating orders.
+
+    This centralizes validation so other modules can import the schema.
+    """
+
+    item_name: str = Field(..., min_length=1, max_length=255)
+    quantity: int = Field(..., ge=1, le=100)
+    notes: str | None = Field(default=None, max_length=1000)

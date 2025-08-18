@@ -1,9 +1,9 @@
 import asyncio
 import os
 
-import asyncpg  # type: ignore
-import bcrypt
-import structlog
+import bcrypt  # type: ignore[import]
+import structlog  # type: ignore[import]
+from psycopg_pool import AsyncConnectionPool  # type: ignore
 
 logger = structlog.get_logger()
 
@@ -31,33 +31,37 @@ async def ensure_admin() -> None:
 
     # Hash password in threadpool to avoid blocking the event loop
     try:
-        hashed = await asyncio.to_thread(
-            lambda pw: bcrypt.hashpw(pw, bcrypt.gensalt(rounds=12)),
-            admin_pass.encode("utf-8"),
+
+        def hashpw_lambda(pw: bytes) -> bytes:
+            return bcrypt.hashpw(pw, bcrypt.gensalt(rounds=12))
+
+        hashed: bytes = await asyncio.to_thread(
+            hashpw_lambda, admin_pass.encode("utf-8")
         )
-        password_hash = hashed.decode("utf-8")
+        password_hash: str = hashed.decode("utf-8")
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("admin-bootstrap.hash-failed", error=str(exc))
         return
 
-    conn: asyncpg.Connection | None = None
+    pool = AsyncConnectionPool(database_url, min_size=1, max_size=5, open=False)  # type: ignore[no-untyped-call,unknown-member,unknown-variable]
+    await pool.open()  # type: ignore[unknown-member,unknown-variable]
     try:
-        conn = await asyncpg.connect(database_url)
-        row = await conn.fetchrow(
-            "SELECT id FROM users WHERE username = $1", admin_user
-        )
-        if row:
-            logger.info("admin-bootstrap.exists", username=admin_user)
-            return
+        async with pool.connection() as conn:  # type: ignore[unknown-member,unknown-variable]
+            async with conn.cursor() as cur:  # type: ignore[unknown-member,unknown-variable]
+                await cur.execute(  # type: ignore[unknown-member,unknown-variable]
+                    "SELECT id FROM users WHERE username = %s", (admin_user,)
+                )
+                row = await cur.fetchone()  # type: ignore[unknown-member,unknown-variable]
+                if row:
+                    logger.info("admin-bootstrap.exists", username=admin_user)
+                    return
 
-        await conn.execute(
-            "INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, TRUE)",
-            admin_user,
-            password_hash,
-        )
-        logger.info("admin-bootstrap.created", username=admin_user)
+                await cur.execute(  # type: ignore[unknown-member,unknown-variable]
+                    "INSERT INTO users (username, password_hash, is_admin) VALUES (%s, %s, TRUE)",
+                    (admin_user, password_hash),
+                )
+                logger.info("admin-bootstrap.created", username=admin_user)
     except Exception as exc:  # pragma: no cover - environment dependent
         logger.exception("admin-bootstrap.failed", error=str(exc))
     finally:
-        if conn is not None:
-            await conn.close()
+        await pool.close()  # type: ignore[unknown-member,unknown-variable]

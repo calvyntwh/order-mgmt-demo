@@ -1,8 +1,7 @@
-import httpx
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+import httpx  # type: ignore
+from fastapi import FastAPI, Request  # type: ignore
+from fastapi.responses import HTMLResponse  # type: ignore
+from fastapi.templating import Jinja2Templates  # type: ignore
 
 app = FastAPI(title="web-gateway")
 templates = Jinja2Templates(directory="app/templates")
@@ -36,9 +35,12 @@ async def order_page(request: Request):
 @app.post("/order", response_class=HTMLResponse)
 async def submit_order(request: Request):
     form = await request.form()
+    quantity_value = form.get("quantity")
+    if not isinstance(quantity_value, str):
+        quantity_value = "1"  # Default value if not a string
     data = {
         "item_name": form.get("item_name"),
-        "quantity": int(form.get("quantity")),
+        "quantity": int(quantity_value),  # type: ignore[reportArgumentType]
         "notes": form.get("notes") or None,
     }
     async with httpx.AsyncClient() as client:

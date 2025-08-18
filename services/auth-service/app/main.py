@@ -1,26 +1,29 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+
+from fastapi import FastAPI  # type: ignore
 
 from .auth import router as auth_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import logging
+
     try:
         from .bootstrap import ensure_admin
         from .db import init_db_pool
 
         await init_db_pool()
         await ensure_admin()
-    except Exception:
-        pass
+    except Exception as e:
+        logging.exception("Error during startup: %s", e)
     yield
     try:
         from .db import close_db_pool
 
         await close_db_pool()
-    except Exception:
-        pass
+    except Exception as e:
+        logging.exception("Error during shutdown: %s", e)
 
 
 app = FastAPI(title="auth-service", lifespan=lifespan)
