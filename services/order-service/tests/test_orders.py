@@ -67,7 +67,8 @@ async def test_admin_approve_reject(monkeypatch):
     monkeypatch.setattr("app.orders.get_db_pool", dummy_get_db_pool)
     # admin user
     monkeypatch.setattr(
-        "app.orders.get_current_user", lambda: {"sub": "admin", "username": "admin", "is_admin": True}
+        "app.orders.get_current_user",
+        lambda: {"sub": "admin", "username": "admin", "is_admin": True},
     )
 
     async with AsyncClient(app=app, base_url="http://test") as ac:

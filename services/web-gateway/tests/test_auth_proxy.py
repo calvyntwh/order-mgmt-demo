@@ -30,6 +30,7 @@ async def test_whoami(monkeypatch):
             return DummyResponse({"sub": "u1", "username": "tester", "is_admin": False})
 
     import httpx
+
     monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
 
     async with AsyncClient(app=app, base_url="http://test") as ac:

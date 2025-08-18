@@ -3,6 +3,7 @@ import httpx
 import pytest
 from app import auth_client
 
+
 async def test_introspect_token(monkeypatch: pytest.MonkeyPatch):
     class DummyResponse:
         def __init__(self, data):

@@ -1,7 +1,8 @@
-import pytest
 import asyncio
 import sys
 import types
+
+import pytest
 
 
 class FakeConn:

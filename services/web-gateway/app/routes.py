@@ -11,6 +11,8 @@ router = APIRouter()
 
 AUTH_URL = "http://auth-service:8000"
 ORDER_URL = "http://order-service:8000"
+
+
 @router.post("/order")
 async def create_order(request: Request):
     data = await request.json()
@@ -19,6 +21,7 @@ async def create_order(request: Request):
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
         return r.json(), r.status_code
+
 
 @router.get("/orders")
 async def list_orders(request: Request):
@@ -36,10 +39,19 @@ async def register(request: Request):
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{AUTH_URL}/auth/register", json=data)
         if r.status_code == 201:
-            return templates.TemplateResponse("login.html", {"request": request, "message": "Registration successful. Please log in."})
+            return templates.TemplateResponse(
+                "login.html",
+                {
+                    "request": request,
+                    "message": "Registration successful. Please log in.",
+                },
+            )
         else:
             msg = r.json().get("detail", "Registration failed.")
-            return templates.TemplateResponse("register.html", {"request": request, "message": msg})
+            return templates.TemplateResponse(
+                "register.html", {"request": request, "message": msg}
+            )
+
 
 @router.post("/login")
 async def login(request: Request):
@@ -50,7 +62,10 @@ async def login(request: Request):
             return RedirectResponse(url="/orders", status_code=303)
         else:
             msg = r.json().get("detail", "Login failed.")
-            return templates.TemplateResponse("login.html", {"request": request, "message": msg})
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "message": msg}
+            )
+
 
 @router.get("/whoami")
 async def whoami(request: Request):

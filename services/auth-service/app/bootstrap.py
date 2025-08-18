@@ -18,7 +18,11 @@ async def ensure_admin() -> None:
     database_url = os.getenv("DATABASE_URL")
 
     if not admin_user or not admin_pass:
-        logger.info("admin-bootstrap.skipped", reason="missing-env", ADMIN_USERNAME=bool(admin_user))
+        logger.info(
+            "admin-bootstrap.skipped",
+            reason="missing-env",
+            ADMIN_USERNAME=bool(admin_user),
+        )
         return
 
     if not database_url:
@@ -39,7 +43,9 @@ async def ensure_admin() -> None:
     conn: asyncpg.Connection | None = None
     try:
         conn = await asyncpg.connect(database_url)
-        row = await conn.fetchrow("SELECT id FROM users WHERE username = $1", admin_user)
+        row = await conn.fetchrow(
+            "SELECT id FROM users WHERE username = $1", admin_user
+        )
         if row:
             logger.info("admin-bootstrap.exists", username=admin_user)
             return

@@ -1,4 +1,3 @@
-
 import os
 import time
 from collections.abc import Callable
@@ -15,6 +14,7 @@ from .db import get_db_pool
 security = HTTPBearer()
 router = APIRouter()
 
+
 def _decode_token(token: str) -> dict[str, Any]:
     try:
         secret = os.getenv("JWT_SECRET", "dev-secret")
@@ -24,8 +24,6 @@ def _decode_token(token: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail="token expired")
     except Exception:
         raise HTTPException(status_code=401, detail="invalid token")
-
-
 
 
 async def get_current_user(
@@ -43,11 +41,9 @@ async def require_admin(
     return user
 
 
-
 class RegisterIn(BaseModel):
     username: str
     password: str
-
 
 
 class TokenOut(BaseModel):
@@ -94,12 +90,15 @@ async def token(form: RegisterIn) -> dict[str, Any]:
 
 
 async def _hash_password(password: str) -> str:
-    hashed: bytes = await __to_thread(bcrypt.hashpw, password.encode("utf-8"), bcrypt.gensalt())
+    hashed: bytes = await __to_thread(
+        bcrypt.hashpw, password.encode("utf-8"), bcrypt.gensalt()
+    )
     return hashed.decode("utf-8")
 
 
 async def __to_thread(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     import asyncio
+
     return await asyncio.to_thread(lambda: fn(*args, **kwargs))
 
 
@@ -126,7 +125,10 @@ async def introspect(
     # return token claims for other services to inspect
     return payload
 
+
 @router.post("/logout")
-async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict[str, str]:
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict[str, str]:
     # For MVP, just accept the token and return success (no blacklist implemented)
     return {"message": "logged out"}
