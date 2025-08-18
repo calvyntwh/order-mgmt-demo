@@ -1,29 +1,23 @@
+
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
 from .db import close_db_pool, init_db_pool
 from .orders import router as orders_router
 
-app = FastAPI(title="order-service")
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     await init_db_pool()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     await close_db_pool()
 
-
+app = FastAPI(title="order-service", lifespan=lifespan)
 app.include_router(orders_router)
 
-
 @app.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     return {"status": "ok", "service": "order-service"}
 
-
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "order-service running"}

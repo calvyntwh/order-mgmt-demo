@@ -1,3 +1,4 @@
+import pytest
 import asyncio
 import sys
 import types
@@ -63,7 +64,7 @@ def _import_with_fakes(exists=False):
     return mod
 
 
-def test_ensure_admin_creates(monkeypatch):
+def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")
@@ -84,7 +85,7 @@ def test_ensure_admin_creates(monkeypatch):
     # we assert no exceptions were raised and function completed successfully.
 
 
-def test_ensure_admin_skips_when_exists(monkeypatch):
+def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")

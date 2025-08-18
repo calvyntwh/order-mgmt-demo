@@ -82,7 +82,7 @@ Quick checklist to follow:
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
 | [MVP] Configure Ruff for code formatting across all services | 🟡 | 1h | ✅ | | 1.1 Complete | Day 3 |
-| [MVP] Set up BasedPyright for type checking | 🟡 | 1h | ❌ | | Task 1 | Day 3 |
+| [MVP] Set up BasedPyright for type checking | 🟡 | 1h | 🟡 | | Task 1 | Day 3 |
 | Configure pytest with coverage for auth-service | 🟡 | 1h | ❌ | | Task 1 | Day 3 |
 | Configure pytest with coverage for order-service | 🟡 | 1h | ❌ | | Task 3 | Day 3 |
 | [BACKLOG] Configure pytest with coverage for web-gateway | 🟡 | 1h | ❌ | | Task 4 | Day 3 |
@@ -126,9 +126,9 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Implement User SQLModel with UUID primary key | 🔴 | 2h | ❌ | | Phase 1 Complete | Day 6 |
-| [MVP] Add username field with proper validation | 🔴 | 1h | ❌ | | Task 1 | Day 6 |
-| [MVP] Add password_hash field with bcrypt constraints | 🔴 | 1h | ❌ | | Task 2 | Day 6 |
+| [MVP] Implement User SQLModel with UUID primary key | 🔴 | 2h | ✅ | | Phase 1 Complete | Day 6 |
+| [MVP] Add username field with proper validation | 🔴 | 1h | ✅ | | Task 1 | Day 6 |
+| [MVP] Add password_hash field with bcrypt constraints | 🔴 | 1h | ✅ | | Task 2 | Day 6 |
 | Add is_admin boolean field with default False | 🔴 | 0.5h | ❌ | | Task 3 | Day 6 |
 | Add created_at and last_login timestamp fields | 🔴 | 0.5h | ❌ | | Task 4 | Day 6 |
 | Create database connection management with asyncpg | 🔴 | 2h | ❌ | | Task 5 | Day 7 |
@@ -170,11 +170,11 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create user registration Pydantic model | 🔴 | 1h | ❌ | | 2.2 Complete | Day 9 |
-| [MVP] Implement username validation (4-20 chars, alphanumeric) | 🔴 | 1h | ❌ | | Task 1 | Day 9 |
-| [MVP] Implement password validation (min 8 chars) | 🔴 | 1h | ❌ | | Task 2 | Day 9 |
-| [MVP] Create user registration endpoint | 🔴 | 2h | ❌ | | Task 3 | Day 10 |
-| [MVP] Add username uniqueness checking | 🔴 | 1h | ❌ | | Task 4 | Day 10 |
+| [MVP] Create user registration Pydantic model | 🔴 | 1h | ✅ | | 2.2 Complete | Day 9 |
+| [MVP] Implement username validation (4-20 chars, alphanumeric) | 🔴 | 1h | ✅ | | Task 1 | Day 9 |
+| [MVP] Implement password validation (min 8 chars) | 🔴 | 1h | ✅ | | Task 2 | Day 9 |
+| [MVP] Create user registration endpoint | 🔴 | 2h | ✅ | | Task 3 | Day 10 |
+| [MVP] Add username uniqueness checking | 🔴 | 1h | ✅ | | Task 4 | Day 10 |
 | Implement proper error handling and responses | 🔴 | 1h | ❌ | | Task 5 | Day 10 |
 | Add structured logging for all operations | 🔴 | 1h | ❌ | | Task 6 | Day 10 |
 
@@ -192,8 +192,8 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Implement OAuth2 password flow endpoint (or a simple token flow for MVP) | 🔴 | 3h | ❌ | | 2.3 Complete | Day 11 |
-| [MVP] Create token verification endpoint | 🔴 | 2h | ❌ | | Task 1 | Day 11 |
+| [MVP] Implement OAuth2 password flow endpoint (or a simple token flow for MVP) | 🔴 | 3h | ✅ | | 2.3 Complete | Day 11 |
+| [MVP] Create token verification endpoint | 🔴 | 2h | ✅ | | Task 1 | Day 11 |
 | [MVP] Implement logout functionality | 🔴 | 2h | ❌ | | Task 2 | Day 11 |
 | Add rate limiting for login attempts (5 per minute) | 🔴 | 3h | ❌ | | 1.4 Complete | Day 12 |
 | Create proper HTTP status codes and error responses | 🔴 | 1h | ❌ | | Tasks 1-3 | Day 12 |
@@ -427,8 +427,8 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Create Auth Service API client | 🔴 | 2h | ❌ | | 4.4 Complete | Day 29 |
-| [MVP] Create Order Service API client | 🔴 | 2h | ❌ | | Task 1 | Day 30 |
+| [MVP] Create Auth Service API client | 🔴 | 2h | ✅ | | 4.4 Complete | Day 29 |
+| [MVP] Create Order Service API client | 🔴 | 2h | ✅ | | Task 1 | Day 30 |
 | [BACKLOG] Implement API proxying for auth endpoints | 🔴 | 2h | ❌ | | Task 2 | Day 30 |
 | [BACKLOG] Implement API proxying for order endpoints | 🔴 | 2h | ❌ | | Task 3 | Day 30 |
 

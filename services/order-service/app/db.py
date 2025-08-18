@@ -1,6 +1,6 @@
 import os
 
-import asyncpg
+import asyncpg  # type: ignore
 
 _pool: asyncpg.pool.Pool | None = None
 

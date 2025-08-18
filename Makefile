@@ -30,3 +30,6 @@ test:
 
 smoke-local:
 	cd scripts && uv run python e2e_smoke.py
+
+typecheck:
+	cd services/$(SERVICE) && uv run basedpyright

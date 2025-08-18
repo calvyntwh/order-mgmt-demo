@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-import asyncpg
+import asyncpg  # type: ignore
 import bcrypt
 import structlog
 
