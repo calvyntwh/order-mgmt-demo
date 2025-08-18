@@ -366,8 +366,8 @@ Quick checklist to follow:
 |------|----------|---------|---------|-----------|--------------|----------|
 | [MVP] Create base Jinja2 template with Bulma CSS (minimal styles) | 🟡 | 2h | ✅ | | 4.1 Complete | Day 24 |
 | Set up Alpine.js for client-side interactivity | 🟡 | 2h | ❌ | | Task 1 | Day 24 |
-| Create navigation component with role-based menus | 🟡 | 2h | ❌ | | Task 2 | Day 25 |
-| Implement flash message system | 🟡 | 1h | ❌ | | Task 3 | Day 25 |
+| Create navigation component with role-based menus | 🟡 | 2h | ✅ | | Task 2 | Day 25 |
+| Implement flash message system | 🟡 | 1h | ✅ | | Task 3 | Day 25 |
 | Set up static asset serving (CSS, JS, images) | 🟡 | 1h | ❌ | | Task 4 | Day 25 |
 
 **Acceptance Criteria**:
