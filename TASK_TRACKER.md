@@ -331,9 +331,10 @@ Verified: token validation/introspection wired into request helpers (used by `se
 
 | Task                                                     | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 | -------------------------------------------------------- | -------- | ------ | ------ | -------- | ------------ | -------- |
-| [MVP] Implement admin dashboard data retrieval (minimal) | 🟡       | 2h     | ❌     |          | 3.3 Complete | Day 19   |
-| [MVP] Create order approval endpoint                     | 🟡       | 2h     | ❌     |          | Task 1       | Day 19   |
-| [MVP] Create order rejection endpoint                    | 🟡       | 2h     | ❌     |          | Task 2       | Day 19   |
+| [MVP] Implement admin dashboard data retrieval (minimal) | 🟡       | 2h     | ✅     |          | 3.3 Complete | Day 19   |
+| [MVP] Create order approval endpoint                     | 🟡       | 2h     | ✅     |          | Task 1       | Day 19   |
+| [MVP] Create order rejection endpoint                    | 🟡       | 2h     | ✅     |          | Task 2       | Day 19   |
+Verified: implemented in `services/order-service/app/orders.py` — admin retrieval via `GET /orders/user/{user_id}`, order approval via `POST /orders/{order_id}/approve`, and order rejection via `POST /orders/{order_id}/reject`.
 | Add search functionality by username                     | 🟡       | 2h     | ❌     |          | Task 3       | Day 20   |
 | Implement CSV export functionality                       | 🟡       | 3h     | ❌     |          | Task 4       | Day 20   |
 | Add order statistics and reporting                       | 🟡       | 1h     | ❌     |          | Task 5       | Day 20   |

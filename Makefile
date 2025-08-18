@@ -41,8 +41,8 @@ coverage:
 	cd services/$(SERVICE) && PYTHONPATH=./ uv run pytest --cov=app --cov-report=term-missing
 
 djlint:
-	cd services/web-gateway && uv run djlint templates --check
+	cd services/web-gateway && uv run djlint app/templates --check
 
 djlint-fix:
-	cd services/web-gateway && uv run djlint templates --fix
+	cd services/web-gateway && uv run djlint app/templates --reformat
 
