@@ -1,13 +1,38 @@
 import os
 import time
+
 import bcrypt
 import jwt
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from .db import get_db_pool
 
 router = APIRouter(prefix="/auth")
+security = HTTPBearer()
+
+
+def _decode_token(token: str) -> dict:
+    try:
+        secret = os.getenv("JWT_SECRET", "dev-secret")
+        alg = os.getenv("JWT_ALGORITHM", "HS256")
+        return jwt.decode(token, secret, algorithms=[alg])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="token expired")
+    except Exception:
+        raise HTTPException(status_code=401, detail="invalid token")
+
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    token = credentials.credentials
+    return _decode_token(token)
+
+
+async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="admin required")
+    return user
 
 
 class RegisterIn(BaseModel):
@@ -69,3 +94,11 @@ def _create_token(sub: str, username: str, is_admin: bool) -> str:
     exp = int(time.time()) + int(os.getenv("JWT_EXPIRE_SECONDS", "900"))
     payload = {"sub": sub, "username": username, "is_admin": is_admin, "exp": exp}
     return jwt.encode(payload, secret, algorithm=os.getenv("JWT_ALGORITHM", "HS256"))
+
+
+@router.get("/introspect")
+async def introspect(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    payload = _decode_token(token)
+    # return token claims for other services to inspect
+    return payload

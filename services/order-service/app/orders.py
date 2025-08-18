@@ -1,25 +1,47 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from .auth_client import introspect_token
 from pydantic import BaseModel
 
 from .db import get_db_pool
 
 router = APIRouter(prefix="/orders")
 
+security = HTTPBearer()
+
+
+from .auth_client import introspect_token
+
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    token = credentials.credentials
+    try:
+        payload = await introspect_token(token)
+        return payload
+    except Exception:
+        raise HTTPException(status_code=401, detail="invalid token")
+
+
+async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="admin required")
+    return user
+
 
 class CreateOrderIn(BaseModel):
-    user_id: str
     item_name: str
     quantity: int
     notes: str | None = None
 
 
 @router.post("/", status_code=201)
-async def create_order(payload: CreateOrderIn):
+async def create_order(payload: CreateOrderIn, user: dict = Depends(get_current_user)):
     pool = get_db_pool()
+    user_id = user.get("sub")
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "INSERT INTO orders (user_id, item_name, quantity, notes) VALUES ($1,$2,$3,$4) RETURNING id",
-            payload.user_id,
+            user_id,
             payload.item_name,
             payload.quantity,
             payload.notes,
@@ -36,16 +58,59 @@ async def list_user_orders(user_id: str):
 
 
 @router.post("/{order_id}/approve")
-async def approve_order(order_id: str):
+async def approve_order(order_id: str, _admin: dict = Depends(require_admin)):
     pool = get_db_pool()
     async with pool.acquire() as conn:
-        result = await conn.execute("UPDATE orders SET status = 'approved' WHERE id = $1", order_id)
-        return {"result": result}
+        row = await conn.fetchrow(
+            "UPDATE orders SET status = 'APPROVED', admin_action_at = now(), updated_at = now() WHERE id = $1 RETURNING id",
+            order_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="order not found")
+        return {"id": row["id"], "status": "APPROVED"}
 
 
 @router.post("/{order_id}/reject")
-async def reject_order(order_id: str):
+async def reject_order(order_id: str, _admin: dict = Depends(require_admin)):
     pool = get_db_pool()
     async with pool.acquire() as conn:
-        result = await conn.execute("UPDATE orders SET status = 'rejected' WHERE id = $1", order_id)
-        return {"result": result}
+        row = await conn.fetchrow(
+            "UPDATE orders SET status = 'REJECTED', admin_action_at = now(), updated_at = now() WHERE id = $1 RETURNING id",
+            order_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="order not found")
+        return {"id": row["id"], "status": "REJECTED"}
+
+
+
+@router.get("/{order_id}")
+async def get_order(order_id: str, user: dict = Depends(get_current_user)):
+    pool = get_db_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, user_id, item_name, quantity, notes, status, created_at, updated_at, admin_action_at FROM orders WHERE id = $1",
+            order_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="order not found")
+        # allow owners or admins
+        if row["user_id"] != user.get("sub") and not user.get("is_admin"):
+            raise HTTPException(status_code=403, detail="forbidden")
+        return dict(row)
+
+
+@router.get("/admin")
+async def list_all_orders(status: str | None = None, _admin: dict = Depends(require_admin)):
+    pool = get_db_pool()
+    async with pool.acquire() as conn:
+        if status:
+            rows = await conn.fetch(
+                "SELECT id, user_id, item_name, quantity, status, created_at FROM orders WHERE status = $1 ORDER BY created_at DESC",
+                status,
+            )
+        else:
+            rows = await conn.fetch(
+                "SELECT id, user_id, item_name, quantity, status, created_at FROM orders ORDER BY created_at DESC"
+            )
+        return [dict(r) for r in rows]
