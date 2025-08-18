@@ -81,7 +81,7 @@ Quick checklist to follow:
 
 | Task | Priority | Effort | Status | Assignee | Dependencies | Due Date |
 |------|----------|---------|---------|-----------|--------------|----------|
-| [MVP] Configure Ruff for code formatting across all services | 🟡 | 1h | ❌ | | 1.1 Complete | Day 3 |
+| [MVP] Configure Ruff for code formatting across all services | 🟡 | 1h | ✅ | | 1.1 Complete | Day 3 |
 | [MVP] Set up BasedPyright for type checking | 🟡 | 1h | ❌ | | Task 1 | Day 3 |
 | Configure pytest with coverage for auth-service | 🟡 | 1h | ❌ | | Task 1 | Day 3 |
 | Configure pytest with coverage for order-service | 🟡 | 1h | ❌ | | Task 3 | Day 3 |

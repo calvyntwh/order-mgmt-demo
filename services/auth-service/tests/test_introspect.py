@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from app.auth import router as auth_router, _create_token
+from app.auth import _create_token
+from app.auth import router as auth_router
 
 app = FastAPI()
 app.include_router(auth_router)

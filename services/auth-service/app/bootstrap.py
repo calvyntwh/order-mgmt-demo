@@ -1,7 +1,5 @@
 import asyncio
-import logging
 import os
-from typing import Optional
 
 import asyncpg
 import bcrypt
@@ -38,7 +36,7 @@ async def ensure_admin() -> None:
         logger.exception("admin-bootstrap.hash-failed", error=str(exc))
         return
 
-    conn: Optional[asyncpg.Connection] = None
+    conn: asyncpg.Connection | None = None
     try:
         conn = await asyncpg.connect(database_url)
         row = await conn.fetchrow("SELECT id FROM users WHERE username = $1", admin_user)

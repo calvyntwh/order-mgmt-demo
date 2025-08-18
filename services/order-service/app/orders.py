@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from .auth_client import introspect_token
 from pydantic import BaseModel
 
+from .auth_client import introspect_token
 from .db import get_db_pool
 
 router = APIRouter(prefix="/orders")
@@ -10,7 +10,6 @@ router = APIRouter(prefix="/orders")
 security = HTTPBearer()
 
 
-from .auth_client import introspect_token
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:

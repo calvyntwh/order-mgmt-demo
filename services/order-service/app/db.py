@@ -1,8 +1,8 @@
 import os
-import asyncpg
-from typing import Optional
 
-_pool: Optional[asyncpg.pool.Pool] = None
+import asyncpg
+
+_pool: asyncpg.pool.Pool | None = None
 
 
 async def init_db_pool() -> None:

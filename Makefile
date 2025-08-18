@@ -1,6 +1,6 @@
 # Makefile for MVP workflows
 
-.PHONY: up down logs smoke build
+.PHONY: up down logs smoke build lint test. smoke-local
 
 up:
 	docker compose -f docker-compose.mvp.yml up -d --build
@@ -19,15 +19,14 @@ build:
 
 
 lint:
-	python -m pip install --upgrade pip && pip install ruff
-	ruff check .
+	cd services/auth-service && uv run ruff check .
+	cd services/order-service && uv run ruff check .
+	cd services/web-gateway && uv run ruff check .
 
 test:
-	python -m pip install --upgrade pip && pip install -r requirements-dev.txt
-	pytest -q services/auth-service/tests
-	pytest -q services/order-service/tests
-	pytest -q services/web-gateway/tests
+	cd services/auth-service && uv run pytest -q
+	cd services/order-service && uv run pytest -q
+	cd services/web-gateway && uv run pytest -q
 
 smoke-local:
-	# Run the local smoke script (expects services to be running locally)
-	python scripts/e2e_smoke.py
+	cd scripts && uv run python e2e_smoke.py
