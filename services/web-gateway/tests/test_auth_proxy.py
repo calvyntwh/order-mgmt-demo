@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.routes import router as routes_router
 
-from .pytest_types import MonkeyPatch
+from pytest_types import MonkeyPatch
 
 app = FastAPI()
 app.include_router(routes_router)
