@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import FastAPI, Request
@@ -9,6 +9,33 @@ from fastapi.templating import Jinja2Templates
 app = FastAPI(title="web-gateway")
 templates = Jinja2Templates(directory="app/templates")
 ORDER_SERVICE_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")
+
+
+def _normalize_mapping(obj: Any) -> dict[str, Any]:
+    # Prefer concrete dict checks: pyright narrows dict[str, Any] better than
+    # collections.abc.Mapping in some configurations. Use dict at runtime and
+    # cast to an explicit dict[Any, Any] for iteration.
+    if not isinstance(obj, dict):
+        return {}
+    # Tell the type checker that obj is a dict for iteration. Use a very
+    # narrow type-ignore on the assignment so runtime semantics are unchanged
+    # and the checker can treat 'mapping' as dict[Any, Any].
+    mapping: dict[Any, Any] = obj  # type: ignore[assignment, reportUnknownArgumentType]
+    out: dict[str, Any] = {}
+    for k, v in mapping.items():
+        out[str(k)] = v
+    return out
+
+
+def _normalize_list(obj: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(obj, list):
+        return out
+    items = cast(list[Any], obj)
+    for item in items:
+        if isinstance(item, dict):
+            out.append(_normalize_mapping(item))
+    return out
 
 
 @app.get("/health")
@@ -59,15 +86,11 @@ async def submit_order(request: Request) -> Any:
         raw: Any = r_orders.json() if r_orders.status_code == 200 else []
         # Build a concrete list[dict[str, Any]] at runtime so the analyzer
         # sees a consistent shape instead of Any | list[Unknown].
-        orders: list[dict[str, Any]] = []
-        if isinstance(raw, list):
-            for item in raw:
-                if isinstance(item, dict):
-                    o: dict[str, Any] = {str(k): v for k, v in item.items()}
-                    oid = o.get("id")
-                    if oid is not None:
-                        o["id"] = str(oid)
-                    orders.append(o)
+        orders = _normalize_list(raw)
+        for o in orders:
+            oid = o.get("id")
+            if oid is not None:
+                o["id"] = str(oid)
     return templates.TemplateResponse(
         "orders.html", {"request": request, "orders": orders, "message": message}
     )
@@ -79,15 +102,11 @@ async def orders_page(request: Request) -> Any:
     async with httpx.AsyncClient() as client:
         r = await client.get(f"{ORDER_SERVICE_URL}/me")
         raw_payload: Any = r.json() if r.status_code == 200 else []
-    orders: list[dict[str, Any]] = []
-    if isinstance(raw_payload, list):
-        for item in raw_payload:
-            if isinstance(item, dict):
-                o: dict[str, Any] = {str(k): v for k, v in item.items()}
-                oid = o.get("id")
-                if oid is not None:
-                    o["id"] = str(oid)
-                orders.append(o)
+    orders = _normalize_list(raw_payload)
+    for o in orders:
+        oid = o.get("id")
+        if oid is not None:
+            o["id"] = str(oid)
     return templates.TemplateResponse(
         "orders.html", {"request": request, "orders": orders}
     )

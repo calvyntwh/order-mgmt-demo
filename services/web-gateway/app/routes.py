@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -15,6 +15,39 @@ AUTH_URL = "http://auth-service:8000"
 ORDER_URL = "http://order-service:8000"
 
 
+def _normalize_mapping(obj: Any) -> dict[str, Any]:
+    """Return a concrete mapping with string keys from a runtime value.
+
+    This is a permissive runtime shim that converts arbitrary dict-like JSON
+    results into typed dict[str, Any] so the static analyzer sees a concrete
+    shape before callers use .get or mutate the mapping.
+    """
+    if not isinstance(obj, dict):
+        return {}
+    # Tell the type checker that obj is a dict for iteration. This narrow
+    # type-ignore avoids passing an untyped Any into dict() constructors.
+    mapping: dict[Any, Any] = obj  # type: ignore[assignment, reportUnknownArgumentType]
+    out: dict[str, Any] = {}
+    for k, v in mapping.items():
+        out[str(k)] = v
+    return out
+
+
+def _normalize_list(obj: Any) -> list[dict[str, Any]]:
+    """Return a concrete list of mappings from a runtime value.
+
+    Accepts any runtime value and returns an empty list if it's not a list.
+    """
+    out: list[dict[str, Any]] = []
+    if not isinstance(obj, list):
+        return out
+    items = cast(list[Any], obj)
+    for item in items:
+        if isinstance(item, dict):
+            out.append(_normalize_mapping(item))
+    return out
+
+
 @router.post("/order")
 async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
     data: Any = await request.json()
@@ -27,14 +60,15 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
         except Exception:
             raw = None
         payload: dict[str, Any] | None = None
-        if isinstance(raw, dict):
-            payload = {str(k): v for k, v in raw.items()}
+        if raw is not None:
+            payload = _normalize_mapping(raw)
         # Normalize id to string if present and return a concrete mapping
-        if isinstance(payload, dict):
+        if payload:
             oid = payload.get("id")
             if oid is not None:
                 payload["id"] = str(oid)
-            return dict(payload), r.status_code
+            # Ensure we return a dict[str, Any] with concrete string keys
+            return ({str(k): v for k, v in payload.items()}, r.status_code)
         return None, r.status_code
 
 
@@ -49,20 +83,14 @@ async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
             raw: Any = r.json()
         except Exception:
             raw = []
-        payload: list[dict[str, Any]] = []
-        if isinstance(raw, list):
-            for item in raw:
-                if isinstance(item, dict):
-                    payload.append({str(k): v for k, v in item.items()})
+        payload = _normalize_list(raw)
         # Normalize any returned order ids to strings and return concrete list
         orders: list[dict[str, Any]] = []
-        if isinstance(payload, list):
-            for o in payload:
-                if isinstance(o, dict):
-                    oid = o.get("id")
-                    if oid is not None:
-                        o["id"] = str(oid)
-                    orders.append(dict(o))
+        for o in payload:
+            oid = o.get("id")
+            if oid is not None:
+                o["id"] = str(oid)
+            orders.append(dict(o))
         return orders, r.status_code
 
 
@@ -110,4 +138,5 @@ async def whoami(request: Request) -> dict[str, Any]:
     # introspect may return Any; ensure dict[str, Any] for callers
     if not isinstance(payload, dict):
         return {}
-    return dict(payload)
+    payload_typed = cast(dict[str, Any], payload)
+    return {str(k): v for k, v in payload_typed.items()}

@@ -1,17 +1,18 @@
 from typing import Any
 
 import httpx
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.routes import router as routes_router
 
+from .pytest_types import MonkeyPatch
+
 app = FastAPI()
 app.include_router(routes_router)
 
 
-def test_whoami(monkeypatch: Any) -> None:
+def test_whoami(monkeypatch: MonkeyPatch) -> None:
     # Dummy response from auth proxy
     class DummyResponse:
         def __init__(self, data: dict[str, object]) -> None:
@@ -28,6 +29,7 @@ def test_whoami(monkeypatch: Any) -> None:
             return self
 
         async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+            # typed permissively — mirrors context manager signature
             return False
 
         async def get(self, *args: Any, **kwargs: Any) -> DummyResponse:
