@@ -3,12 +3,13 @@ from typing import Any, cast
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="web-gateway")
 templates = Jinja2Templates(directory="app/templates")
 ORDER_SERVICE_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")
+AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth-service:8001")
 
 
 def _normalize_mapping(obj: Any) -> dict[str, Any]:
@@ -58,6 +59,66 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
+@app.post("/register")
+async def register(request: Request) -> Any:
+    # Accept JSON or form data from browser
+    try:
+        data: Any = await request.json()
+    except Exception:
+        form = await request.form()
+        data = {k: v for k, v in form.items()}
+
+    async with httpx.AsyncClient() as client:
+        r = await client.post(f"{AUTH_SERVICE_URL}/register", json=data)
+        if r.status_code == 201:
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "message": "Registration successful. Please log in."},
+            )
+        else:
+            try:
+                msg = r.json().get("detail", "Registration failed.")
+            except Exception:
+                msg = "Registration failed."
+            return templates.TemplateResponse(
+                "register.html", {"request": request, "message": msg}
+            )
+
+
+@app.post("/login")
+async def login(request: Request) -> Any:
+    try:
+        data: Any = await request.json()
+    except Exception:
+        form = await request.form()
+        data = {k: v for k, v in form.items()}
+
+    async with httpx.AsyncClient() as client:
+        r = await client.post(f"{AUTH_SERVICE_URL}/token", json=data)
+        if r.status_code == 200:
+            try:
+                token = r.json().get("access_token")
+            except Exception:
+                token = None
+            response = RedirectResponse(url="/orders", status_code=303)
+            if token:
+                response.set_cookie(
+                    key="access_token",
+                    value=token,
+                    httponly=True,
+                    samesite="lax",
+                )
+            return response
+        else:
+            try:
+                msg = r.json().get("detail", "Login failed.")
+            except Exception:
+                msg = "Login failed."
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "message": msg}
+            )
+
+
 @app.get("/order", response_class=HTMLResponse)
 async def order_page(request: Request):
     return templates.TemplateResponse("order.html", {"request": request})
@@ -75,15 +136,44 @@ async def submit_order(request: Request) -> Any:
         "notes": form.get("notes") or None,
     }
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{ORDER_SERVICE_URL}/orders", json=data)
+        # Forward access token from cookie or Authorization header
+        token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
+        headers: dict[str, str] = {}
+        if token_val:
+            if str(token_val).lower().startswith("bearer "):
+                headers["Authorization"] = str(token_val)
+            else:
+                headers["Authorization"] = f"Bearer {token_val}"
+
+        r = await client.post(f"{ORDER_SERVICE_URL}/orders/", json=data, headers=headers)
+        # Defensive parsing: backend may return non-JSON bodies on error
+        try:
+            raw_err = r.json()
+        except Exception:
+            raw_err = None
         if r.status_code == 201:
             message = "Order created successfully."
         else:
-            message = r.json().get("detail", "Order creation failed.")
+            if isinstance(raw_err, dict):
+                message = raw_err.get("detail", "Order creation failed.")
+            else:
+                message = "Order creation failed."
     # Fetch orders after creation
     async with httpx.AsyncClient() as client:
-        r_orders = await client.get(f"{ORDER_SERVICE_URL}/me")
-        raw: Any = r_orders.json() if r_orders.status_code == 200 else []
+        # Forward the same auth headers when listing orders
+        token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
+        headers: dict[str, str] = {}
+        if token_val:
+            if str(token_val).lower().startswith("bearer "):
+                headers["Authorization"] = str(token_val)
+            else:
+                headers["Authorization"] = f"Bearer {token_val}"
+
+        r_orders = await client.get(f"{ORDER_SERVICE_URL}/orders/me", headers=headers)
+        try:
+            raw: Any = r_orders.json() if r_orders.status_code == 200 else []
+        except Exception:
+            raw = []
         # Build a concrete list[dict[str, Any]] at runtime so the analyzer
         # sees a consistent shape instead of Any | list[Unknown].
         orders = _normalize_list(raw)

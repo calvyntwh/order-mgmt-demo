@@ -1,7 +1,7 @@
 from typing import Any, cast
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -50,9 +50,23 @@ def _normalize_list(obj: Any) -> list[dict[str, Any]]:
 
 @router.post("/order")
 async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
-    data: Any = await request.json()
-    token = request.cookies.get("access_token") or request.headers.get("Authorization")
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    # Accept JSON body (fetch/XHR) or HTML form submissions
+    try:
+        data: Any = await request.json()
+    except Exception:
+        form = await request.form()
+        data = {k: v for k, v in form.items()}
+
+    # Token may be stored in a cookie (access_token) or passed via Authorization header
+    token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
+    headers = {}
+    if token_val:
+        # If header value already contains 'Bearer ', forward as-is; otherwise prefix
+        if str(token_val).lower().startswith("bearer "):
+            headers["Authorization"] = str(token_val)
+        else:
+            headers["Authorization"] = f"Bearer {token_val}"
+
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
         try:
@@ -96,7 +110,13 @@ async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
 
 @router.post("/register")
 async def register(request: Request) -> Any:
-    data: Any = await request.json()
+    # Accept JSON or form data
+    try:
+        data: Any = await request.json()
+    except Exception:
+        form = await request.form()
+        data = {k: v for k, v in form.items()}
+
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{AUTH_URL}/auth/register", json=data)
         if r.status_code == 201:
@@ -108,7 +128,11 @@ async def register(request: Request) -> Any:
                 },
             )
         else:
-            msg = r.json().get("detail", "Registration failed.")
+            # Defensive parsing of error message
+            try:
+                msg = r.json().get("detail", "Registration failed.")
+            except Exception:
+                msg = "Registration failed."
             return templates.TemplateResponse(
                 "register.html", {"request": request, "message": msg}
             )
@@ -116,13 +140,36 @@ async def register(request: Request) -> Any:
 
 @router.post("/login")
 async def login(request: Request) -> Any:
-    data: Any = await request.json()
+    # Accept JSON or form data
+    try:
+        data: Any = await request.json()
+    except Exception:
+        form = await request.form()
+        data = {k: v for k, v in form.items()}
+
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{AUTH_URL}/auth/token", json=data)
         if r.status_code == 200:
-            return RedirectResponse(url="/orders", status_code=303)
+            # Extract access token and set as HttpOnly cookie for browser flows
+            try:
+                token = r.json().get("access_token")
+            except Exception:
+                token = None
+            response = RedirectResponse(url="/orders", status_code=303)
+            if token:
+                # In production use secure=True and proper SameSite depending on requirements
+                response.set_cookie(
+                    key="access_token",
+                    value=token,
+                    httponly=True,
+                    samesite="lax",
+                )
+            return response
         else:
-            msg = r.json().get("detail", "Login failed.")
+            try:
+                msg = r.json().get("detail", "Login failed.")
+            except Exception:
+                msg = "Login failed."
             return templates.TemplateResponse(
                 "login.html", {"request": request, "message": msg}
             )
