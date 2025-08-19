@@ -33,10 +33,64 @@ class FakeAsyncPGModule(types.ModuleType):
         return FakeConn(exists=self._exists)
 
 
+class FakePsycopgPool(types.ModuleType):
+    """Minimal fake psycopg_pool exposing AsyncConnectionPool used by bootstrap.ensure_admin.
+
+    The real AsyncConnectionPool can attempt network operations during open/connection; this
+    fake keeps everything in-process and synchronous for tests.
+    """
+
+    def __init__(self, name: str, exists: bool = False) -> None:
+        super().__init__(name)
+        self._exists = exists
+
+    class AsyncConnectionPool:
+        def __init__(
+            self,
+            database_url: str,
+            min_size: int = 1,
+            max_size: int = 5,
+            open: bool = False,
+        ):
+            self._database_url = database_url
+
+        async def open(self) -> None:  # pragma: no cover - trivial fake
+            return None
+
+        async def close(self) -> None:  # pragma: no cover - trivial fake
+            return None
+
+        # Async context manager for connection()
+        class _ConnCtx:
+            def __init__(self, conn: FakeConn):
+                self._conn = conn
+
+            async def __aenter__(self):
+                return self._conn
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        def connection(self):
+            # Use the exists flag from the outer FakePsycopgPool class if present.
+            # The class object itself doesn't carry instance state here, so read
+            # from the module-level object that will be registered in sys.modules.
+            mod = sys.modules.get("psycopg_pool")
+            exists = False
+            if mod is not None and hasattr(mod, "_exists"):
+                exists = getattr(mod, "_exists")
+            return FakePsycopgPool.AsyncConnectionPool._ConnCtx(FakeConn(exists=exists))
+
+
 def _import_with_fakes(exists: bool = False):
     # Insert fake asyncpg module into sys.modules before importing
     fake = FakeAsyncPGModule(exists=exists)
-    sys.modules.setdefault("asyncpg", fake)
+    # Force-replace any real asyncpg with our fake so psycopg_pool uses it.
+    sys.modules["asyncpg"] = fake
+
+    # Insert fake psycopg_pool module so bootstrap imports the fake AsyncConnectionPool
+    fake_pool = FakePsycopgPool("psycopg_pool", exists=exists)
+    sys.modules["psycopg_pool"] = fake_pool
 
     # Provide a minimal bcrypt substitute (not actually used because we stub to_thread)
     class FakeBcrypt(types.ModuleType):
@@ -46,7 +100,8 @@ def _import_with_fakes(exists: bool = False):
         def gensalt(self, rounds: int = 12) -> bytes:
             return b"salt"
 
-    sys.modules.setdefault("bcrypt", FakeBcrypt("bcrypt"))
+    # Replace bcrypt with a lightweight fake for tests.
+    sys.modules["bcrypt"] = FakeBcrypt("bcrypt")
 
     class FakeLogger:
         def info(self, *a: Any, **k: Any) -> None:
@@ -62,7 +117,8 @@ def _import_with_fakes(exists: bool = False):
         def get_logger(self) -> FakeLogger:
             return FakeLogger()
 
-    sys.modules.setdefault("structlog", FakeStructlog("structlog"))
+    # Replace structlog to avoid noisy logging in tests.
+    sys.modules["structlog"] = FakeStructlog("structlog")
 
     # Import by file path to avoid package name issues (hyphens)
     import importlib.util
@@ -73,15 +129,20 @@ def _import_with_fakes(exists: bool = False):
     spec: ModuleSpec | None = importlib.util.spec_from_file_location(
         "auth_bootstrap", str(bootstrap_path)
     )
-    if spec is None or not isinstance(spec.loader, SourceFileLoader):
+    if (
+        spec is None
+        or spec.loader is None
+        or not isinstance(spec.loader, SourceFileLoader)
+    ):
         raise ImportError("Could not load module spec or loader for bootstrap.py")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+    bootstrap_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bootstrap_mod)
+    sys.modules[spec.name] = bootstrap_mod
+    return bootstrap_mod
 
 
-def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.asyncio
+async def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")
@@ -92,17 +153,21 @@ def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
     ) -> bytes:
         return b"hashed"
 
-    monkeypatch.setattr(asyncio, "to_thread", to_thread_stub)
+    monkeypatch.setattr(asyncio, "to_thread", to_thread_stub, raising=False)
 
-    mod = _import_with_fakes(exists=False)
+    bootstrap_mod = _import_with_fakes(exists=False)
 
     # Run the coroutine
-    asyncio.run(mod.ensure_admin())
+    await bootstrap_mod.ensure_admin()
+
+    # Clean up sys.modules to avoid caching issues
+    sys.modules.pop("auth_bootstrap", None)
 
     # No exceptions should be raised; function should complete successfully.
 
 
-def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.asyncio
+async def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")
@@ -114,7 +179,10 @@ def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(asyncio, "to_thread", to_thread_stub)
 
-    mod = _import_with_fakes(exists=True)
+    bootstrap_mod = _import_with_fakes(exists=True)
 
     # Should not raise
-    asyncio.run(mod.ensure_admin())
+    await bootstrap_mod.ensure_admin()
+
+    # Clean up sys.modules to avoid caching issues
+    sys.modules.pop("auth_bootstrap", None)
