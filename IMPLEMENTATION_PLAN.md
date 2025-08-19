@@ -22,6 +22,24 @@ Follow a "build-up" approach: implement tasks tagged with [MVP] first to deliver
 
 For each completed [MVP] task: open a small PR with verification steps, run the local smoke test, and mark the task done. After the happy-path is working, iterate on BACKLOG/EXTENDED items.
 
+## Recent work (snapshot) — 2025-08-20
+
+Summary of developer work and verification completed during the latest debug/run session:
+
+- Gateway changes: `services/web-gateway/app/main.py` updated to accept JSON or form-encoded POSTs (register/login/order), set an HttpOnly `access_token` cookie on login, forward Authorization (from incoming header or cookie) to backend services, and defensively handle non-JSON backend responses to avoid 500 crashes.
+- Order-service fix: `services/order-service/app/orders.py` had `/orders/admin` declared after a parameterized `/{order_id}` route which caused literal "admin" to be interpreted as a UUID (422); the admin route was moved above parameterized routes and admin endpoints now respond correctly.
+- Admin UI: a minimal `/admin` UI was added to the gateway (template + approve/reject form endpoints) and wired to proxy admin approve/reject calls to the order-service.
+- Verification: rebuilt the web-gateway image, confirmed `/admin` returns HTML, and verified approve/reject flows via the gateway using an admin token — order statuses updated (APPROVED/REJECTED) in order-service.
+
+Immediate recommendations / follow-ups:
+
+- Add an authentication guard for the gateway `/admin` page so unauthenticated users are redirected to `/login`.
+- Add CSRF protection for admin form POSTs (or migrate to XHR with CSRF token) to avoid accidental/forged admin actions.
+- Harden cookies for production (set Secure flag when TLS present) and integrate Valkey-based session persistence instead of storing raw JWTs in cookies.
+- Add a Playwright UI test that exercises register→login→create order→admin approve to prevent regressions.
+
+Status: changes applied and verified locally; tracker updated separately. These are MVP-focused changes and should be reflected in the task tracker and sprint plan.
+
 ## MVP (2-week) Scoped Plan — Happy-path Demo (OPTIONAL FAST-TRACK)
 
 Purpose: provide a minimal, realistic plan to deliver a demo in ~2 weeks with 1–2 developers focusing strictly on the happy path. This is the recommended path when the goal is a stakeholder demo rather than production readiness.
@@ -149,6 +167,8 @@ Notes:
 - [ ] Set up pre-commit hooks
 - [ ] Create Makefile with development shortcuts
 - [ ] [BACKLOG] Configure security scanning with Trivy
+- [ ] [MVP] Add CI pipeline (GitHub Actions) that runs lint, tests, and builds on PRs — required before merging critical changes.
+- [ ] [MVP] Add PR / Code Review gate: require 1 reviewer and passing CI for any merge to `main`.
 
 **Acceptance Criteria**:
 - All linting and formatting tools work across all services

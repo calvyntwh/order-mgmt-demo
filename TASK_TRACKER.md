@@ -29,6 +29,25 @@ Quick checklist to follow:
 
 **Status**: ❌ Not Started | 🟡 In Progress | ✅ Complete | 🚫 Blocked
 
+## Recent work (snapshot) — 2025-08-20
+
+Summary of actions completed during the last debugging session and verification:
+
+- Gateway: updated `services/web-gateway/app/main.py` to accept JSON or form-encoded POSTs for register/login/order flows; set HttpOnly `access_token` cookie on successful login; forward Authorization (from incoming header or cookie) when proxying to order-service; defensively handle non-JSON backend responses to avoid 500 crashes.
+- Order-service: fixed route ordering in `services/order-service/app/orders.py` so `/orders/admin` is declared before parameterized `/{order_id}` routes to avoid "admin" being parsed as a UUID (resolved 422 errors).
+- Gateway: added a minimal Admin UI (`/admin`) and approve/reject form endpoints that proxy to order-service; added `admin.html` template and navigation link.
+- Verification: rebuilt web-gateway, confirmed `/admin` returns HTML, verified approve/reject flows via the gateway using an admin token — order status updates were observed in the database (APPROVED/REJECTED).
+
+Notes & immediate follow-ups:
+
+- The gateway currently stores the JWT in an HttpOnly cookie and forwards it as a Bearer token to backend services; consider securing cookies with `Secure` in TLS environments and integrate Valkey for session persistence.
+- Add authentication guard for `/admin` to redirect unauthenticated users to `/login`.
+- Add CSRF protection or convert admin form POSTs to XHR with a CSRF token.
+- Add Playwright test(s) to cover the admin list + approve flow to prevent regression.
+
+Status: updates recorded and verified locally — ✅ for the items above.
+
+
 ---
 
 ## Phase 1: Foundation & Infrastructure Setup (Week 1)

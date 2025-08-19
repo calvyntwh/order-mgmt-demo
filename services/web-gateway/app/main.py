@@ -5,6 +5,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from .auth_proxy import introspect
 
 app = FastAPI(title="web-gateway")
 templates = Jinja2Templates(directory="app/templates")
@@ -210,15 +211,38 @@ async def admin_page(request: Request) -> Any:
     access token stored in the HttpOnly cookie (set at login) or an
     Authorization header when present.
     """
-    # Prefer an explicit Authorization header if provided; otherwise read the
-    # cookie value and format it as a Bearer token.
-    incoming_auth = request.headers.get("Authorization")
-    token_val = request.cookies.get("access_token")
-    headers: dict[str, str] = {}
-    if incoming_auth:
-        headers["Authorization"] = incoming_auth
-    elif token_val:
-        headers["Authorization"] = f"Bearer {token_val}"
+    # Extract token from Authorization header (Bearer) or cookie. If no
+    # token is present, redirect the browser to the login page.
+    def _extract_raw_token(req: Request) -> str | None:
+        incoming = req.headers.get("Authorization")
+        if incoming:
+            if incoming.lower().startswith("bearer "):
+                return incoming.split(" ", 1)[1]
+            return incoming
+        return req.cookies.get("access_token")
+
+    raw_token = _extract_raw_token(request)
+    if not raw_token:
+        return RedirectResponse(url="/login", status_code=303)
+
+    # Validate token via auth service introspection. If introspection fails
+    # or the token is not an admin token, short-circuit with a redirect or
+    # 403-friendly page respectively.
+    try:
+        claims = await introspect(raw_token)
+    except Exception:
+        return RedirectResponse(url="/login", status_code=303)
+    if not isinstance(claims, dict) or not claims.get("is_admin"):
+        # Render the admin page but include a message and 403 status so the
+        # user sees that admin rights are required.
+        return templates.TemplateResponse(
+            "admin.html",
+            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            status_code=403,
+        )
+
+    # Build headers for proxying to order-service using the validated token
+    headers: dict[str, str] = {"Authorization": f"Bearer {raw_token}"}
 
     async with httpx.AsyncClient() as client:
         r = await client.get(f"{ORDER_SERVICE_URL}/orders/admin", headers=headers)
@@ -241,15 +265,29 @@ async def admin_page(request: Request) -> Any:
 
 @app.post("/admin/{order_id}/approve")
 async def admin_approve(order_id: str, request: Request) -> Any:
+    def _extract_raw_token(req: Request) -> str | None:
+        incoming = req.headers.get("Authorization")
+        if incoming:
+            if incoming.lower().startswith("bearer "):
+                return incoming.split(" ", 1)[1]
+            return incoming
+        return req.cookies.get("access_token")
 
-    incoming_auth = request.headers.get("Authorization")
-    token_val = request.cookies.get("access_token")
-    headers: dict[str, str] = {}
-    if incoming_auth:
-        headers["Authorization"] = incoming_auth
-    elif token_val:
-        headers["Authorization"] = f"Bearer {token_val}"
+    raw_token = _extract_raw_token(request)
+    if not raw_token:
+        return RedirectResponse(url="/login", status_code=303)
+    try:
+        claims = await introspect(raw_token)
+    except Exception:
+        return RedirectResponse(url="/login", status_code=303)
+    if not isinstance(claims, dict) or not claims.get("is_admin"):
+        return templates.TemplateResponse(
+            "admin.html",
+            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            status_code=403,
+        )
 
+    headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
         await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers)
 
@@ -258,15 +296,29 @@ async def admin_approve(order_id: str, request: Request) -> Any:
 
 @app.post("/admin/{order_id}/reject")
 async def admin_reject(order_id: str, request: Request) -> Any:
+    def _extract_raw_token(req: Request) -> str | None:
+        incoming = req.headers.get("Authorization")
+        if incoming:
+            if incoming.lower().startswith("bearer "):
+                return incoming.split(" ", 1)[1]
+            return incoming
+        return req.cookies.get("access_token")
 
-    incoming_auth = request.headers.get("Authorization")
-    token_val = request.cookies.get("access_token")
-    headers: dict[str, str] = {}
-    if incoming_auth:
-        headers["Authorization"] = incoming_auth
-    elif token_val:
-        headers["Authorization"] = f"Bearer {token_val}"
+    raw_token = _extract_raw_token(request)
+    if not raw_token:
+        return RedirectResponse(url="/login", status_code=303)
+    try:
+        claims = await introspect(raw_token)
+    except Exception:
+        return RedirectResponse(url="/login", status_code=303)
+    if not isinstance(claims, dict) or not claims.get("is_admin"):
+        return templates.TemplateResponse(
+            "admin.html",
+            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            status_code=403,
+        )
 
+    headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
         await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers)
 
