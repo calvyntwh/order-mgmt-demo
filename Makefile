@@ -19,6 +19,27 @@ smoke:
 build:
 	docker compose -f docker-compose.mvp.yml build
 
+
+# Rebuild a single service and restart it (SERVICE must match service directory name, e.g. web-gateway)
+.PHONY: rebuild rebuild-all rebuild-auth rebuild-order rebuild-web
+rebuild:
+	@echo "Rebuilding $(SERVICE)..."
+	docker compose -f docker-compose.mvp.yml build $(SERVICE)
+	docker compose -f docker-compose.mvp.yml up -d $(SERVICE)
+
+rebuild-all: build
+	docker compose -f docker-compose.mvp.yml up -d
+
+# Convenience names for common services
+rebuild-auth:
+	$(MAKE) SERVICE=auth-service rebuild
+
+rebuild-order:
+	$(MAKE) SERVICE=order-service rebuild
+
+rebuild-web:
+	$(MAKE) SERVICE=web-gateway rebuild
+
 smoke-local:
 	cd scripts && uv run python e2e_smoke.py
 
