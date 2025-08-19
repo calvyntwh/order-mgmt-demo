@@ -60,8 +60,7 @@ async def register(payload: RegisterIn) -> dict[str, Any]:
     pool: AsyncConnectionPool[AsyncConnection] | None = get_db_pool()  # type: ignore[reportUnknownVariableType]
     if pool is None:
         raise HTTPException(status_code=500, detail="DB pool not available")
-    conn: AsyncConnection = await pool.connection()  # type: ignore[reportUnknownMemberType]
-    async with conn:
+    async with pool.connection() as conn:  # type: ignore[reportUnknownMemberType]
         cur: AsyncCursor = conn.cursor()  # type: ignore[reportUnknownMemberType]
         async with cur:
             await cur.execute(
@@ -83,8 +82,7 @@ async def token(form: RegisterIn) -> dict[str, Any]:
     pool: AsyncConnectionPool[AsyncConnection] | None = get_db_pool()  # type: ignore[reportUnknownVariableType]
     if pool is None:
         raise HTTPException(status_code=500, detail="DB pool not available")
-    conn: AsyncConnection = await pool.connection()  # type: ignore[reportUnknownMemberType]
-    async with conn:
+    async with pool.connection() as conn:  # type: ignore[reportUnknownMemberType]
         cur: AsyncCursor = conn.cursor()  # type: ignore[reportUnknownMemberType]
         async with cur:
             await cur.execute(

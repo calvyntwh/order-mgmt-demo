@@ -1,9 +1,9 @@
 {
   "folders": [
-    {"name": "web-gateway", "path": "./services/web-gateway"},
-    {"name": "auth-service", "path": "./services/auth-service"},
-    {"name": "order-service", "path": "./services/order-service"},
-    {"name": "root", "path": "."}
+    { "name": "web-gateway", "path": "./services/web-gateway" },
+    { "name": "auth-service", "path": "./services/auth-service" },
+    { "name": "order-service", "path": "./services/order-service" },
+    { "name": "root", "path": "." }
   ],
   "settings": {
     "python.defaultInterpreterPath": "./.venv/bin/python"

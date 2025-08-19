@@ -8,17 +8,22 @@ import asyncio
 
 import httpx # type: ignore
 
-AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8000")
-ORDER_URL = os.getenv("ORDER_SERVICE_URL", "http://localhost:8001")
+AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
+ORDER_URL = os.getenv("ORDER_SERVICE_URL", "http://localhost:8002")
 
 
 async def run_smoke():
     async with httpx.AsyncClient() as client:
         # register
-        r = await client.post(f"{AUTH_URL}/auth/register", json={"username": "smoke-user", "password": "password123"})
+        r = await client.post(
+            f"{AUTH_URL}/register",
+            json={"username": "smoke-user", "password": "password123"},
+        )
         print("register:", r.status_code)
         # token
-        r = await client.post(f"{AUTH_URL}/auth/token", json={"username": "smoke-user", "password": "password123"})
+        r = await client.post(
+            f"{AUTH_URL}/token", json={"username": "smoke-user", "password": "password123"}
+        )
         print("token:", r.status_code, r.text)
         token = r.json().get("access_token")
         headers = {"Authorization": f"Bearer {token}"}

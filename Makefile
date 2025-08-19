@@ -1,6 +1,6 @@
 # Makefile for MVP workflows
 
-.PHONY: up down logs smoke build lint test smoke-local format lint-fix typecheck coverage djlint djlint-fix
+.PHONY: up down logs logs-follow smoke build lint test smoke-local format lint-fix typecheck coverage djlint djlint-fix
 
 SERVICE ?= auth-service
 
@@ -10,8 +10,17 @@ up:
 down:
 	docker compose -f docker-compose.mvp.yml down
 
+LOG_TAIL ?= 200
+LOG_SERVICE ?=
+
+# By default `make logs` will show the last $(LOG_TAIL) lines and exit.
+# To follow the logs use `make logs-follow` or set LOG_FOLLOW=true and run the follow target.
 logs:
-	docker compose -f docker-compose.mvp.yml logs -f
+	docker compose -f docker-compose.mvp.yml logs --tail=$(LOG_TAIL) $(LOG_SERVICE)
+
+# Follow logs (blocking) - preserves previous behavior but with a configurable tail and optional service
+logs-follow:
+	docker compose -f docker-compose.mvp.yml logs -f --tail=$(LOG_TAIL) $(LOG_SERVICE)
 
 smoke:
 	./scripts/smoke.sh
@@ -66,4 +75,14 @@ djlint:
 
 djlint-fix:
 	cd services/web-gateway && uv run djlint app/templates --reformat
+
+health:
+	@echo "Checking services health..."
+	@for p in 8000 8001 8002; do printf "port $$p: "; curl -sS --max-time 5 "http://localhost:$$p/health" || echo "FAILED"; echo; done
+
+compose-config:
+	docker compose -f docker-compose.mvp.yml config
+
+compose-ps:
+	docker compose -f docker-compose.mvp.yml ps
 

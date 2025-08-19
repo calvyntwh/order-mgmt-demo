@@ -1,9 +1,13 @@
 import os
 
+from typing import Any, cast
+
 from psycopg import AsyncConnection  # type: ignore
 from psycopg_pool import AsyncConnectionPool  # type: ignore
 
-_pool: AsyncConnectionPool[AsyncConnection] | None = None  # type: ignore[reportUnknownVariableType]
+# store as Any internally to avoid generic-invariance issues from the library's
+# types; cast on return to preserve the public API type for callers.
+_pool: Any = None  # type: ignore[reportUnknownVariableType]
 
 
 async def init_db_pool() -> None:
@@ -16,12 +20,13 @@ async def init_db_pool() -> None:
     _pool = pool
 
 
-def get_db_pool() -> AsyncConnectionPool[AsyncConnection] | None:
+def get_db_pool() -> AsyncConnectionPool | None:
     pool = _pool
     if not isinstance(pool, AsyncConnectionPool):
         return None
     if hasattr(pool, "open") and getattr(pool, "open", False):  # type: ignore[reportUnknownMemberType]
-        return pool  # type: ignore[reportUnknownVariableType]
+        # return a non-generic pool type to avoid generic-invariance issues
+        return cast(AsyncConnectionPool, pool)
     return None  # type: ignore[reportUnknownParameterType]
 
 
