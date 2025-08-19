@@ -200,3 +200,74 @@ async def orders_page(request: Request) -> Any:
     return templates.TemplateResponse(
         "orders.html", {"request": request, "orders": orders}
     )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request) -> Any:
+    """Admin UI: list all orders by calling order-service /orders/admin.
+
+    This page is intended for local/dev admin workflows. It forwards the
+    access token stored in the HttpOnly cookie (set at login) or an
+    Authorization header when present.
+    """
+    # Prefer an explicit Authorization header if provided; otherwise read the
+    # cookie value and format it as a Bearer token.
+    incoming_auth = request.headers.get("Authorization")
+    token_val = request.cookies.get("access_token")
+    headers: dict[str, str] = {}
+    if incoming_auth:
+        headers["Authorization"] = incoming_auth
+    elif token_val:
+        headers["Authorization"] = f"Bearer {token_val}"
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(f"{ORDER_SERVICE_URL}/orders/admin", headers=headers)
+        status_code = r.status_code
+        try:
+            raw: Any = r.json() if status_code == 200 else []
+        except Exception:
+            raw = []
+
+    orders = _normalize_list(raw)
+    for o in orders:
+        oid = o.get("id")
+        if oid is not None:
+            o["id"] = str(oid)
+
+    return templates.TemplateResponse(
+        "admin.html", {"request": request, "orders": orders, "status_code": status_code}
+    )
+
+
+@app.post("/admin/{order_id}/approve")
+async def admin_approve(order_id: str, request: Request) -> Any:
+
+    incoming_auth = request.headers.get("Authorization")
+    token_val = request.cookies.get("access_token")
+    headers: dict[str, str] = {}
+    if incoming_auth:
+        headers["Authorization"] = incoming_auth
+    elif token_val:
+        headers["Authorization"] = f"Bearer {token_val}"
+
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers)
+
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@app.post("/admin/{order_id}/reject")
+async def admin_reject(order_id: str, request: Request) -> Any:
+
+    incoming_auth = request.headers.get("Authorization")
+    token_val = request.cookies.get("access_token")
+    headers: dict[str, str] = {}
+    if incoming_auth:
+        headers["Authorization"] = incoming_auth
+    elif token_val:
+        headers["Authorization"] = f"Bearer {token_val}"
+
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers)
+
+    return RedirectResponse(url="/admin", status_code=303)
