@@ -1,12 +1,12 @@
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException  # type: ignore
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # type: ignore
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # pydantic BaseModel/Field not needed here; OrderCreate imported from models
 from .auth_client import introspect_token
-from .db import get_db_pool  # type: ignore[import]
+from .db import get_db_pool
 from .models import OrderCreate  # centralized Pydantic/SQLModel input model
 
 router = APIRouter(prefix="/orders")
@@ -23,7 +23,28 @@ def _resolve_pool(get_pool: Any) -> Any:
     return get_pool() if callable(get_pool) else get_pool
 
 
-async def _execute_fetchone(pool: Any, sql: str, params: tuple | None = None) -> Any:
+def _row_to_mapping(row: Any, keys: list[str] | None = None) -> dict[str, Any]:
+    """Normalize a DB row (mapping or sequence) into a dict[str, Any].
+
+    If `keys` is provided and `row` is a sequence/tuple, keys will be zipped
+    with the row values. This centralizes the normalization logic so the
+    typechecker sees a single concrete mapping type instead of mixed unknown
+    mapping/tuple shapes.
+    """
+    if row is None:
+        return {}
+    if isinstance(row, dict):
+        raw_map = cast(dict[Any, Any], row)
+        return {str(k): v for k, v in raw_map.items()}
+    row_tuple = cast(tuple[Any, ...], row)
+    if keys is None:
+        return {str(i): v for i, v in enumerate(row_tuple)}
+    return dict(zip(keys, row_tuple))
+
+
+async def _execute_fetchone(
+    pool: Any, sql: str, params: tuple[Any, ...] | None = None
+) -> Any:
     """Execute a query and return a single row. Works with both the real pool
     (connection()/cursor() API) and the test DummyPool (acquire()/fetchrow()).
     """
@@ -34,32 +55,32 @@ async def _execute_fetchone(pool: Any, sql: str, params: tuple | None = None) ->
             if hasattr(conn, "fetchrow"):
                 return await conn.fetchrow(sql, params)
             # otherwise fall back to cursor API
-            async with conn.cursor() as cur:  # type: ignore[reportUnknownMemberType]
-                await cur.execute(sql, params)  # type: ignore[reportUnknownMemberType]
-                return await cur.fetchone()  # type: ignore[reportUnknownMemberType]
+            async with conn.cursor() as cur:
+                await cur.execute(sql, params)
+                return await cur.fetchone()
     else:
-        async with pool.connection() as conn:  # type: ignore[reportOptionalMemberAccess]
-            async with conn.cursor() as cur:  # type: ignore[reportUnknownMemberType]
-                await cur.execute(sql, params)  # type: ignore[reportUnknownMemberType]
-                return await cur.fetchone()  # type: ignore[reportUnknownMemberType]
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(sql, params)
+                return await cur.fetchone()
 
 
 async def _execute_fetchall(
-    pool: Any, sql: str, params: tuple | None = None
+    pool: Any, sql: str, params: tuple[Any, ...] | None = None
 ) -> list[Any]:
     params = params or ()
     if hasattr(pool, "acquire"):
         async with pool.acquire() as conn:
             if hasattr(conn, "fetchall"):
                 return await conn.fetchall()
-            async with conn.cursor() as cur:  # type: ignore[reportUnknownMemberType]
-                await cur.execute(sql, params)  # type: ignore[reportUnknownMemberType]
-                return await cur.fetchall()  # type: ignore[reportUnknownMemberType]
+            async with conn.cursor() as cur:
+                await cur.execute(sql, params)
+                return await cur.fetchall()
     else:
-        async with pool.connection() as conn:  # type: ignore[reportOptionalMemberAccess]
-            async with conn.cursor() as cur:  # type: ignore[reportUnknownMemberType]
-                await cur.execute(sql, params)  # type: ignore[reportUnknownMemberType]
-                return await cur.fetchall()  # type: ignore[reportUnknownMemberType]
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(sql, params)
+                return await cur.fetchall()
 
 
 async def get_current_user(
@@ -100,7 +121,11 @@ async def create_order(
     # Dummy fetchrow returns dict-like, real cursor returns tuple
     if row is None:
         return {"id": None}
-    id_val = row.get("id") if hasattr(row, "get") else row[0]
+    if hasattr(row, "get"):
+        order_map: dict[str, Any] = _row_to_mapping(row)
+    else:
+        order_map = _row_to_mapping(row, ["id"])
+    id_val = cast(Any, order_map.get("id"))
     return {"id": str(id_val)}
 
 
@@ -119,18 +144,15 @@ async def list_my_orders(
         (user_id,),
     )
     if rows and isinstance(rows[0], dict):
+        normalized: list[dict[str, Any]] = []
         for r in rows:
-            r["id"] = str(r.get("id"))
-        return rows
-    return [
-        dict(
-            zip(
-                ["id", "item_name", "quantity", "status", "created_at"],
-                [str(r[0])] + list(r[1:]),
-            )
-        )
-        for r in rows
-    ]
+            r_map: dict[str, Any] = _row_to_mapping(r)
+            r_map["id"] = str(cast(Any, r_map.get("id")))
+            normalized.append(r_map)
+        return normalized
+    # sequence rows
+    keys = ["id", "item_name", "quantity", "status", "created_at"]
+    return [_row_to_mapping(r, keys) for r in rows]
 
 
 @router.get("/user/{user_id}")
@@ -150,18 +172,14 @@ async def list_user_orders(
         (user_id,),
     )
     if rows and isinstance(rows[0], dict):
+        normalized: list[dict[str, Any]] = []
         for r in rows:
-            r["id"] = str(r.get("id"))
-        return rows
-    return [
-        dict(
-            zip(
-                ["id", "item_name", "quantity", "status", "created_at"],
-                [str(r[0])] + list(r[1:]),
-            )
-        )
-        for r in rows
-    ]
+            r_map: dict[str, Any] = _row_to_mapping(r)
+            r_map["id"] = str(cast(Any, r_map.get("id")))
+            normalized.append(r_map)
+        return normalized
+    keys = ["id", "item_name", "quantity", "status", "created_at"]
+    return [_row_to_mapping(r, keys) for r in rows]
 
 
 @router.post("/{order_id}/approve")
@@ -178,7 +196,12 @@ async def approve_order(
     )
     if not row:
         raise HTTPException(status_code=404, detail="order not found")
-    id_val = row.get("id") if hasattr(row, "get") else row[0]
+    row_map: dict[str, Any]
+    if hasattr(row, "get"):
+        row_map = _row_to_mapping(row)
+    else:
+        row_map = _row_to_mapping(row, ["id"])  # type: ignore[arg-type]
+    id_val = cast(Any, row_map.get("id"))
     return {"id": str(id_val), "status": "APPROVED"}
 
 
@@ -196,7 +219,12 @@ async def reject_order(
     )
     if not row:
         raise HTTPException(status_code=404, detail="order not found")
-    id_val = row.get("id") if hasattr(row, "get") else row[0]
+    row_map: dict[str, Any]
+    if hasattr(row, "get"):
+        row_map = _row_to_mapping(row)
+    else:
+        row_map = _row_to_mapping(row, ["id"])  # type: ignore[arg-type]
+    id_val = cast(Any, row_map.get("id"))
     return {"id": str(id_val), "status": "REJECTED"}
 
 
@@ -214,30 +242,32 @@ async def get_order(
     )
     if not row:
         raise HTTPException(status_code=404, detail="order not found")
-    result = (
-        row
-        if isinstance(row, dict)
-        else dict(
-            zip(
-                [
-                    "id",
-                    "user_id",
-                    "item_name",
-                    "quantity",
-                    "notes",
-                    "status",
-                    "created_at",
-                    "updated_at",
-                    "admin_action_at",
-                ],
-                row,
-            )
-        )
-    )
-    result["id"] = str(result.get("id"))
-    if result["user_id"] != user.get("sub") and not user.get("is_admin"):
+    # Build a well-typed dict[str, Any] regardless of whether the DB returned
+    # a mapping (test dummy) or a tuple (real cursor). Declare `order_result`
+    # as dict[str, Any] so the analyzer treats it consistently.
+    order_result: dict[str, Any]
+    if isinstance(row, dict):
+        order_result = _row_to_mapping(row)
+    else:
+        keys = [
+            "id",
+            "user_id",
+            "item_name",
+            "quantity",
+            "notes",
+            "status",
+            "created_at",
+            "updated_at",
+            "admin_action_at",
+        ]
+        order_result = _row_to_mapping(row, keys)
+    # Normalize id and user_id to concrete types before using them
+    id_val = cast(Any, order_result.get("id"))
+    order_result["id"] = str(id_val)
+    user_id_val = cast(Any, order_result.get("user_id"))
+    if user_id_val != user.get("sub") and not user.get("is_admin"):
         raise HTTPException(status_code=403, detail="forbidden")
-    return result
+    return order_result
 
 
 @router.get("/admin")
@@ -260,7 +290,8 @@ async def list_all_orders(
         )
     if rows and isinstance(rows[0], dict):
         for r in rows:
-            r["id"] = str(r.get("id"))
+            r_map: dict[str, Any] = cast(dict[str, Any], r)
+            r_map["id"] = str(cast(Any, r_map.get("id")))
         return rows
     return [
         dict(

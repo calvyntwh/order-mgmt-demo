@@ -1,9 +1,12 @@
 import asyncio
 import os
+from typing import Any
 
-import bcrypt  # type: ignore[import]
-import structlog  # type: ignore[import]
-from psycopg_pool import AsyncConnectionPool  # type: ignore
+import bcrypt
+import structlog
+
+# Local permissive stub provides AsyncConnectionPool types in `types/`
+from psycopg_pool import AsyncConnectionPool
 
 logger = structlog.get_logger()
 
@@ -43,20 +46,21 @@ async def ensure_admin() -> None:
         logger.exception("admin-bootstrap.hash-failed", error=str(exc))
         return
 
-    pool = AsyncConnectionPool(database_url, min_size=1, max_size=5, open=False)  # type: ignore[no-untyped-call,unknown-member,unknown-variable]
-    await pool.open()  # type: ignore[unknown-member,unknown-variable]
+    pool = AsyncConnectionPool(database_url, min_size=1, max_size=5, open=False)
+    await pool.open()
     try:
-        async with pool.connection() as conn:  # type: ignore[unknown-member,unknown-variable]
-            async with conn.cursor() as cur:  # type: ignore[unknown-member,unknown-variable]
-                await cur.execute(  # type: ignore[unknown-member,unknown-variable]
+        async with pool.connection() as conn:
+            cur: Any = conn.cursor()
+            async with cur:
+                await cur.execute(
                     "SELECT id FROM users WHERE username = %s", (admin_user,)
                 )
-                row = await cur.fetchone()  # type: ignore[unknown-member,unknown-variable]
+                row = await cur.fetchone()
                 if row:
                     logger.info("admin-bootstrap.exists", username=admin_user)
                     return
 
-                await cur.execute(  # type: ignore[unknown-member,unknown-variable]
+                await cur.execute(
                     "INSERT INTO users (username, password_hash, is_admin) VALUES (%s, %s, TRUE)",
                     (admin_user, password_hash),
                 )
@@ -64,4 +68,4 @@ async def ensure_admin() -> None:
     except Exception as exc:  # pragma: no cover - environment dependent
         logger.exception("admin-bootstrap.failed", error=str(exc))
     finally:
-        await pool.close()  # type: ignore[unknown-member,unknown-variable]
+        await pool.close()

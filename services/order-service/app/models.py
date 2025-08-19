@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel  # type: ignore
+from sqlmodel import Field, SQLModel
 
 
 class OrderStatus(str, Enum):

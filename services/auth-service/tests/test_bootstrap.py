@@ -65,10 +65,15 @@ class FakePsycopgPool(types.ModuleType):
             def __init__(self, conn: FakeConn):
                 self._conn = conn
 
-            async def __aenter__(self):
+            async def __aenter__(self) -> FakeConn:
                 return self._conn
 
-            async def __aexit__(self, exc_type, exc, tb):
+            async def __aexit__(
+                self,
+                exc_type: type | None,
+                exc: BaseException | None,
+                tb: object | None,
+            ) -> bool:
                 return False
 
         def connection(self):
@@ -142,7 +147,7 @@ def _import_with_fakes(exists: bool = False):
 
 
 @pytest.mark.asyncio
-async def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
+async def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")
@@ -167,7 +172,7 @@ async def test_ensure_admin_creates(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
-async def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch):
+async def test_ensure_admin_skips_when_exists(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD", "secret")
     monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@localhost/db")

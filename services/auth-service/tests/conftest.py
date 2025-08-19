@@ -1,10 +1,11 @@
 import hashlib
+from collections.abc import Generator
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def fast_bcrypt(monkeypatch):
+def fast_bcrypt(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     """Replace bcrypt.gensalt/hashpw/checkpw with fast deterministic stubs for tests.
 
     This keeps tests fast while still exercising the bcrypt API contract

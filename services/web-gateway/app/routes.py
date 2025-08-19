@@ -1,7 +1,9 @@
-import httpx  # type: ignore
-from fastapi import APIRouter, HTTPException, Request  # type: ignore
-from fastapi.responses import RedirectResponse  # type: ignore
-from fastapi.templating import Jinja2Templates  # type: ignore
+from typing import Any
+
+import httpx
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
 
 from .auth_proxy import introspect
 
@@ -14,44 +16,59 @@ ORDER_URL = "http://order-service:8000"
 
 
 @router.post("/order")
-async def create_order(request: Request):
-    data = await request.json()
+async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
+    data: Any = await request.json()
     token = request.cookies.get("access_token") or request.headers.get("Authorization")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
         try:
-            payload = r.json()
+            raw: Any = r.json()
         except Exception:
-            payload = None
-        # Normalize id to string if present
-        if isinstance(payload, dict) and payload.get("id") is not None:
-            payload["id"] = str(payload["id"])
-        return payload, r.status_code
+            raw = None
+        payload: dict[str, Any] | None = None
+        if isinstance(raw, dict):
+            payload = {str(k): v for k, v in raw.items()}
+        # Normalize id to string if present and return a concrete mapping
+        if isinstance(payload, dict):
+            oid = payload.get("id")
+            if oid is not None:
+                payload["id"] = str(oid)
+            return dict(payload), r.status_code
+        return None, r.status_code
 
 
 @router.get("/orders")
-async def list_orders(request: Request):
+async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
     token = request.cookies.get("access_token") or request.headers.get("Authorization")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     user_id = request.cookies.get("user_id") or "demo"  # fallback for MVP
     async with httpx.AsyncClient() as client:
         r = await client.get(f"{ORDER_URL}/orders/user/{user_id}", headers=headers)
         try:
-            payload = r.json()
+            raw: Any = r.json()
         except Exception:
-            payload = []
-        # Normalize any returned order ids to strings
+            raw = []
+        payload: list[dict[str, Any]] = []
+        if isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, dict):
+                    payload.append({str(k): v for k, v in item.items()})
+        # Normalize any returned order ids to strings and return concrete list
+        orders: list[dict[str, Any]] = []
         if isinstance(payload, list):
             for o in payload:
-                if isinstance(o, dict) and o.get("id") is not None:
-                    o["id"] = str(o["id"])
-        return payload, r.status_code
+                if isinstance(o, dict):
+                    oid = o.get("id")
+                    if oid is not None:
+                        o["id"] = str(oid)
+                    orders.append(dict(o))
+        return orders, r.status_code
 
 
 @router.post("/register")
-async def register(request: Request):
-    data = await request.json()
+async def register(request: Request) -> Any:
+    data: Any = await request.json()
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{AUTH_URL}/auth/register", json=data)
         if r.status_code == 201:
@@ -70,8 +87,8 @@ async def register(request: Request):
 
 
 @router.post("/login")
-async def login(request: Request):
-    data = await request.json()
+async def login(request: Request) -> Any:
+    data: Any = await request.json()
     async with httpx.AsyncClient() as client:
         r = await client.post(f"{AUTH_URL}/auth/token", json=data)
         if r.status_code == 200:
@@ -84,10 +101,13 @@ async def login(request: Request):
 
 
 @router.get("/whoami")
-async def whoami(request: Request):
+async def whoami(request: Request) -> dict[str, Any]:
     auth = request.headers.get("Authorization")
     if not auth:
         raise HTTPException(status_code=401, detail="missing authorization header")
     token = auth.split(" ", 1)[1] if " " in auth else auth
-    payload = await introspect(token)
-    return payload
+    payload: Any = await introspect(token)
+    # introspect may return Any; ensure dict[str, Any] for callers
+    if not isinstance(payload, dict):
+        return {}
+    return dict(payload)

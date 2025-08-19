@@ -42,11 +42,6 @@ ignore = ["E501"]
 [tool.basedpyright]
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportUnknownParameterType = "none"
-reportUnknownArgumentType = "none"
-reportMissingParameterType = "none"
 stubPath = "types"
 exclude = [".venv", ".venv/**", "__pycache__", "build", "dist"]
 reportMissingTypeStubs = false

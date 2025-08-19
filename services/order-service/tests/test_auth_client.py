@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 import pytest
 
@@ -5,25 +7,27 @@ from app import auth_client
 
 
 @pytest.mark.asyncio
-async def test_introspect_token(monkeypatch):
+async def test_introspect_token(monkeypatch: pytest.MonkeyPatch) -> None:
     class DummyResponse:
-        def __init__(self, data):
+        def __init__(self, data: dict[str, Any]) -> None:
             self._data = data
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             return None
 
-        def json(self):
+        def json(self) -> dict[str, Any]:
             return self._data
 
     class DummyClient:
-        async def __aenter__(self):
+        async def __aenter__(self) -> "DummyClient":
             return self
 
-        async def __aexit__(self, exc_type, exc, tb):
+        async def __aexit__(
+            self, exc_type: type | None, exc: BaseException | None, tb: object | None
+        ) -> bool:
             return False
 
-        async def get(self, *args, **kwargs):
+        async def get(self, *args: Any, **kwargs: Any) -> "DummyResponse":
             return DummyResponse({"sub": "u1", "username": "tester", "is_admin": False})
 
     monkeypatch.setattr(httpx, "AsyncClient", DummyClient)

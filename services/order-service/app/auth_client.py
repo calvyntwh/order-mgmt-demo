@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-import httpx  # type: ignore
+import httpx
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
 

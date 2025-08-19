@@ -1,15 +1,18 @@
-from fastapi.testclient import TestClient  # type: ignore
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
 
 from app.main import app
 from app.orders import get_current_user, require_admin
 
 
 # Dependency overrides for tests
-def fake_user():
+def fake_user() -> dict[str, Any]:
     return {"sub": "u1", "username": "tester", "is_admin": True}
 
 
-def fake_admin():
+def fake_admin() -> dict[str, Any]:
     return {"sub": "admin", "username": "admin", "is_admin": True}
 
 
@@ -23,7 +26,7 @@ client = TestClient(app)
 TEST_ORDER_ID = "11111111-1111-1111-1111-111111111111"
 
 
-def test_create_order(monkeypatch):
+def test_create_order(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.orders.get_db_pool", _dummy_get_db_pool())
     headers = {"Authorization": "Bearer test-token"}
     r = client.post(
@@ -37,7 +40,7 @@ def test_create_order(monkeypatch):
         raise AssertionError(f"Expected id '{TEST_ORDER_ID}', got {r.json()['id']}")
 
 
-def test_admin_approve_reject(monkeypatch):
+def test_admin_approve_reject(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.orders.get_db_pool", _dummy_get_db_pool(approve_only=True))
     headers = {"Authorization": "Bearer test-token"}
     r = client.post(f"/orders/{TEST_ORDER_ID}/approve", headers=headers)
@@ -53,22 +56,28 @@ def test_admin_approve_reject(monkeypatch):
         raise AssertionError(f"Expected status 'REJECTED', got {r.json()['status']}")
 
 
-def _dummy_get_db_pool(approve_only=False):
+def _dummy_get_db_pool(approve_only: bool = False):
     class DummyConn:
-        async def fetchrow(self, *args, **kwargs):
-            if not approve_only and "INSERT INTO orders" in args[0]:
+        async def fetchrow(
+            self, sql: str, *args: Any, **kwargs: Any
+        ) -> dict[str, object] | None:
+            # Use `in` checks against the SQL string; we keep `sql` typed as str
+            # and *args/**kwargs as Any so the typechecker doesn't complain.
+            if not approve_only and "INSERT INTO orders" in sql:
                 return {"id": TEST_ORDER_ID}
-            if "UPDATE orders SET status = 'APPROVED'" in args[0]:
+            if "UPDATE orders SET status = 'APPROVED'" in sql:
                 return {"id": TEST_ORDER_ID, "status": "APPROVED"}
-            if "UPDATE orders SET status = 'REJECTED'" in args[0]:
+            if "UPDATE orders SET status = 'REJECTED'" in sql:
                 return {"id": TEST_ORDER_ID, "status": "REJECTED"}
             return None
 
     class DummyAcquireCM:
-        async def __aenter__(self):
+        async def __aenter__(self) -> DummyConn:
             return DummyConn()
 
-        async def __aexit__(self, exc_type, exc, tb):
+        async def __aexit__(
+            self, exc_type: type | None, exc: BaseException | None, tb: object | None
+        ) -> bool:
             return False
 
     class DummyPool:

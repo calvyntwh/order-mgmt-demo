@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI  # type: ignore
+from fastapi import FastAPI
 
 from .auth import router as auth_router
 
