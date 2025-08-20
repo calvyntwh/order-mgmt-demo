@@ -85,6 +85,9 @@
 - [ ] [9] DB migrations + test infra
   - Add alembic (or equivalent) config for `auth-service` and `order-service` and initial migrations.
   - Add CI step to apply migrations to the test DB before integration tests.
+  - Decision for demo: DEFER full Alembic migrations for the MVP/demo.
+    - Rationale: SQL initializers exist for a fast demo setup: `infra/postgres/init-auth.sql` and `infra/postgres/init-orders.sql`.
+    - Action: keep SQL initializer files in `infra/postgres/` and add a later task to introduce Alembic if schema evolves post-demo.
 
 - [ ] [10] Integration/e2e tests & CI job
   - Add integration tests that exercise gateway→auth→order flows using test DB and migrations.
@@ -94,11 +97,18 @@
   - Ensure order-service performs role checks server-side (do not rely solely on gateway).
 
 - [ ] [12] Structured logging, health, and metrics
-  - Add health/readiness endpoints and basic /metrics
-  - Add structured logs and standard request format for diagnostics.
+  - Keep it minimal for the demo: add basic `/health` and consistent structured log lines now; defer Prometheus/OTel instrumentation.
+  - Actions:
+    - Implement a lightweight `/health` (200 OK) and `/ready` endpoint in each service for the demo/runtime checks.
+    - Standardize a simple structured log line format (JSON or key=value) and ensure critical handlers include service, level, message, and request_id.
+    - Defer adding Prometheus `/metrics` endpoints and OTel tracing until post‑MVP.
 
 - [ ] [13] Security hardening & scanning
-  - Add Trivy CI job, harden bcrypt rounds config, verify JWT alg enforcement and key rotation plan.
+  - Scope for demo: defer full security scanning (Trivy) and heavy crypto hardening, but make minimal, low-risk improvements now.
+  - Actions:
+    - Make bcrypt rounds configurable via env var (default to a reasonable dev value, document recommended production >=12).
+    - Add a short note to `todo.md` and service README sections documenting the required JWT algorithm (e.g., `HS256`) and rotation plan to be implemented post‑MVP.
+    - Defer adding Trivy CI job and full crypto hardening until after the demo.
 
 - [ ] [14] Clean up tracker and CI hooks
   - Remove references to removed `update_tracker` script in CI/docs or update hooks to use `todo.md`.
