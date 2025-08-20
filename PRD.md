@@ -8,11 +8,15 @@ Alright buddy, let me give you the comprehensive PRD and Tech Spec based on ever
 
 ## Repository status (automated snapshot)
 
-- Date: 2025-08-19
+- Date: 2025-08-20
 - Tests: auth-service (6 passed), order-service (6 passed), web-gateway (1 passed)
 - Coverage (pytest-cov, term report): auth-service ~40%, order-service ~45%, web-gateway ~32%
 - Recent code notes: `services/order-service/app/orders.py` updated to support test DummyPool (added `_resolve_pool`, `_execute_fetchone`, `_execute_fetchall`); several test/runtime-safe edits applied to DB init patterns in auth-service to avoid Optional-member access during typechecking.
 - Short next steps: add focused unit tests for auth and order flows to raise coverage; generate HTML coverage reports; consider adding lightweight type stubs for `psycopg`/`psycopg_pool` to reduce targeted type ignores.
+
+Repo reality notes (short):
+- The web-gateway currently sets a short-lived JWT in an HttpOnly cookie named `access_token` and uses token introspection to guard admin pages; a Valkey-backed session store and server-side token revocation are described in the spec but are not implemented in the running demo.
+- A minimal Admin UI (`/admin`) and approve/reject handlers are present and were exercised end-to-end; Playwright automation was prototyped but the canonical Playwright test is still tracked in the backlog.
 
 
 ## **Executive Summary**
