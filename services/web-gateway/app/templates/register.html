@@ -2,13 +2,14 @@
 {% block title %}Register{% endblock %}
 {% block content %}
     <h1 class="title">Register</h1>
-    <form method="post" action="/register">
+    <form method="post" action="/register" id="register-form">
         <div class="field">
             <label class="label">Username</label>
             <div class="control">
                 <input class="input"
                        type="text"
                        name="username"
+                       autocomplete="username"
                        required
                        minlength="4"
                        maxlength="20">
@@ -17,7 +18,15 @@
         <div class="field">
             <label class="label">Password</label>
             <div class="control">
-                <input class="input" type="password" name="password" required minlength="8">
+                <input class="input"
+                       id="password"
+                       type="password"
+                       name="password"
+                       autocomplete="new-password"
+                       required
+                       minlength="8">
+                <progress id="pw-strength" max="4" value="0" style="width:100%;margin-top:6px"></progress>
+                <p id="pw-hint" class="help">Password must be at least 8 characters.</p>
             </div>
         </div>
         <div class="field">
@@ -26,4 +35,24 @@
             </div>
         </div>
     </form>
+    <script>
+        const pw = document.getElementById('password');
+        const prog = document.getElementById('pw-strength');
+        const hint = document.getElementById('pw-hint');
+        function scorePassword(s) {
+            let score = 0;
+            if (!s) return 0;
+            if (s.length >= 8) score++;
+            if (/[A-Z]/.test(s)) score++;
+            if (/[0-9]/.test(s)) score++;
+            if (/[^A-Za-z0-9]/.test(s)) score++;
+            return score;
+        }
+        pw?.addEventListener('input', (e) => {
+            const v = e.target.value;
+            const s = scorePassword(v);
+            prog.value = s;
+            hint.textContent = s < 2 ? 'Weak password' : s === 2 ? 'Fair' : s === 3 ? 'Good' : 'Strong';
+        });
+    </script>
 {% endblock %}

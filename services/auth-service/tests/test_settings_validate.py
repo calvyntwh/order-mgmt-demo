@@ -1,4 +1,3 @@
-import os
 
 
 def test_validate_fails_with_default_dev_secret(monkeypatch):
@@ -7,7 +6,8 @@ def test_validate_fails_with_default_dev_secret(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", "dev-secret")
     monkeypatch.setenv("BCRYPT_ROUNDS", "12")
     # import settings module from local app package
-    import importlib, sys
+    import importlib
+    import sys
 
     sys.path.insert(0, "services/auth-service")
     try:
@@ -33,7 +33,8 @@ def test_validate_passes_with_strong_values(monkeypatch):
     monkeypatch.setenv("ENV", "production")
     monkeypatch.setenv("JWT_SECRET", "x" * 40)
     monkeypatch.setenv("BCRYPT_ROUNDS", "12")
-    import importlib, sys
+    import importlib
+    import sys
 
     sys.path.insert(0, "services/auth-service")
     try:

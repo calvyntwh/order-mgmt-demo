@@ -107,6 +107,11 @@ def _normalize_list(obj: Any) -> list[dict[str, Any]]:
     return out
 
 
+def _is_htmx(request: Request) -> bool:
+    # HTMX adds the HX-Request header; some clients set Accept too.
+    return request.headers.get("HX-Request", "false").lower() == "true"
+
+
 # auth header building centralized in app/security.py
 
 
@@ -295,6 +300,12 @@ async def submit_order(request: Request) -> Any:
             if oid is not None:
                 o["id"] = str(oid)
 
+    # If request is from HTMX, return a small fragment (confirmation) to swap into page
+    if _is_htmx(request):
+        return templates.TemplateResponse(
+            "orders.html",
+            {"request": request, "orders": orders, "message": message},
+        )
     return templates.TemplateResponse(
         "orders.html", {"request": request, "orders": orders, "message": message}
     )
@@ -406,6 +417,23 @@ async def admin_approve(order_id: str, request: Request) -> Any:
             f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers
         )
 
+    # If HTMX requested an inline update, fetch updated order and return the
+    # single row partial so client can swap it.
+    if _is_htmx(request):
+        async with httpx.AsyncClient() as client:
+            headers = inject_request_id_headers(headers, request)
+            r = await client.get(
+                f"{ORDER_SERVICE_URL}/orders/{order_id}", headers=headers
+            )
+            try:
+                raw = r.json() if r.status_code == 200 else {}
+            except ValueError:
+                raw = {}
+        order = _normalize_mapping(raw) if isinstance(raw, dict) else {}
+        return templates.TemplateResponse(
+            "_order_row.html", {"request": request, "order": order}
+        )
+
     return RedirectResponse(url="/admin", status_code=303)
 
 
@@ -443,6 +471,21 @@ async def admin_reject(order_id: str, request: Request) -> Any:
         headers = inject_request_id_headers(headers, request)
         await client.post(
             f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers
+        )
+
+    if _is_htmx(request):
+        async with httpx.AsyncClient() as client:
+            headers = inject_request_id_headers(headers, request)
+            r = await client.get(
+                f"{ORDER_SERVICE_URL}/orders/{order_id}", headers=headers
+            )
+            try:
+                raw = r.json() if r.status_code == 200 else {}
+            except ValueError:
+                raw = {}
+        order = _normalize_mapping(raw) if isinstance(raw, dict) else {}
+        return templates.TemplateResponse(
+            "_order_row.html", {"request": request, "order": order}
         )
 
     return RedirectResponse(url="/admin", status_code=303)

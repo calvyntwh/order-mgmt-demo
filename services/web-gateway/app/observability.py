@@ -1,6 +1,6 @@
 import logging
-import sys
 import os
+import sys
 import uuid
 from collections.abc import Callable
 
@@ -10,6 +10,7 @@ from fastapi import Request
 
 def setup_logging() -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso")
+
     # Use the same structured JSON pipeline as other services for consistency.
     # Add a small "print" processor so tests using capfd reliably capture the
     # emitted JSON regardless of capture timing. The processor renders the
@@ -21,9 +22,11 @@ def setup_logging() -> None:
             renderer = structlog.processors.JSONRenderer()
             s = renderer(None, None, event_dict)
             print(s)
-        except Exception:
-            # Best-effort; don't raise logging errors
-            pass
+        except Exception as exc:
+            # Best-effort; don't raise logging errors. Log at debug so tests
+            # still get visibility when needed, but avoid raising here.
+            logger = structlog.get_logger()
+            logger.debug("log-render-failed", exc_info=exc)
         return event_dict
 
     # Build processor list and include the print processor only when not in

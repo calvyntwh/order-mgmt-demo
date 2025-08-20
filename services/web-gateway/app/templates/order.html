@@ -2,7 +2,11 @@
 {% block title %}Create Order{% endblock %}
 {% block content %}
     <h1 class="title">Create Order</h1>
-    <form method="post" action="/order">
+    <form method="post"
+          action="/order"
+          hx-post="/order"
+          hx-target="#order-result"
+          hx-swap="innerHTML">
         <div class="field">
             <label class="label">Item Name</label>
             <div class="control">
@@ -37,4 +41,5 @@
             </div>
         </div>
     </form>
+    <div id="order-result"></div>
 {% endblock %}
