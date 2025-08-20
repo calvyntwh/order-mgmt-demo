@@ -169,7 +169,7 @@
      - `X-Request-ID` header is injected into responses and propagated on outbound calls via `inject_request_id_headers()`.
    - Deferred: Prometheus `/metrics` and OTel tracing remain TODO.
 
-- [ ] [13] Security hardening & scanning
+- [x] [13] Security hardening & scanning
   - Scope for demo: defer full security scanning (Trivy) and heavy crypto hardening, but make minimal, low-risk improvements now.
   - Actions:
     - Make bcrypt rounds configurable via env var (default to a reasonable dev value, document recommended production >=12).

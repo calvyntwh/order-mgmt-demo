@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from .db import get_db_pool
 from .session_store import get_session_store
+from .settings import settings
 
 security = HTTPBearer()
 router = APIRouter()
@@ -192,8 +193,13 @@ async def refresh(payload: dict[str, str]) -> dict[str, Any]:
 
 
 async def _hash_password(password: str) -> str:
+    # Use configured bcrypt rounds (work factor). Default is a low value for
+    # fast local development; set BCRYPT_ROUNDS>=12 in production.
+    rounds = getattr(settings, "BCRYPT_ROUNDS", 4)
     hashed: bytes = await __to_thread(
-        bcrypt.hashpw, password.encode("utf-8"), bcrypt.gensalt()
+        bcrypt.hashpw,
+        password.encode("utf-8"),
+        bcrypt.gensalt(rounds),
     )
     # bcrypt returns raw bytes that are not valid UTF-8; store safely using base64
     return base64.b64encode(hashed).decode("ascii")
