@@ -1,18 +1,21 @@
-from typing import Any, cast
 import json
+import os
+from typing import Any, cast
+
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .auth_proxy import introspect
+from .observability import inject_request_id_headers
+from .security import build_auth_headers_from_request, get_current_user
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter()
 
 
-AUTH_URL = "http://auth-service:8000"
-ORDER_URL = "http://order-service:8000"
+AUTH_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth-service:8001")
+ORDER_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")
 
 
 def _normalize_mapping(obj: Any) -> dict[str, Any]:
@@ -59,19 +62,11 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
-    # Token may be stored in a cookie (access_token) or passed via Authorization header
-    token_val = request.cookies.get("access_token") or request.headers.get(
-        "Authorization"
-    )
-    headers = {}
-    if token_val:
-        # If header value already contains 'Bearer ', forward as-is; otherwise prefix
-        if str(token_val).lower().startswith("bearer "):
-            headers["Authorization"] = str(token_val)
-        else:
-            headers["Authorization"] = f"Bearer {token_val}"
-
+    # Build headers from incoming request using centralized helper. This
+    # preserves consistent behavior for cookie vs header extraction.
+    headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
         try:
             raw: Any = r.json()
@@ -95,19 +90,12 @@ async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
     # Prefer Authorization header first, fall back to access_token cookie. If a
     # bare token value is provided (cookie), prefix with 'Bearer '. This keeps
     # the gateway behavior consistent with other handlers that forward tokens.
-    token = request.headers.get("Authorization") or request.cookies.get("access_token")
-    headers: dict[str, str] = {}
-    if token:
-        sval = str(token)
-        if sval.lower().startswith("bearer "):
-            headers["Authorization"] = sval
-        else:
-            headers["Authorization"] = f"Bearer {sval}"
-
+    headers = await build_auth_headers_from_request(request)
     # Call the canonical per-user endpoint on order-service. This avoids
     # ambiguity with parameterized routes like `/{order_id}` and matches the
     # recommended canonical route `/orders/me` from the tracker.
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         r = await client.get(f"{ORDER_URL}/orders/me", headers=headers)
         try:
             raw: Any = r.json()
@@ -136,7 +124,8 @@ async def register(request: Request) -> Any:
         data = {k: v for k, v in form.items()}
 
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{AUTH_URL}/auth/register", json=data)
+        headers = inject_request_id_headers(None, request)
+        r = await client.post(f"{AUTH_URL}/auth/register", json=data, headers=headers)
         if r.status_code == 201:
             return templates.TemplateResponse(
                 "login.html",
@@ -166,7 +155,8 @@ async def login(request: Request) -> Any:
         data = {k: v for k, v in form.items()}
 
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{AUTH_URL}/auth/token", json=data)
+        headers = inject_request_id_headers(None, request)
+        r = await client.post(f"{AUTH_URL}/auth/token", json=data, headers=headers)
         if r.status_code == 200:
             # Extract access token and set as HttpOnly cookie for browser flows
             try:
@@ -195,12 +185,10 @@ async def login(request: Request) -> Any:
 
 @router.get("/whoami")
 async def whoami(request: Request) -> dict[str, Any]:
-    auth = request.headers.get("Authorization")
-    if not auth:
-        raise HTTPException(status_code=401, detail="missing authorization header")
-    token = auth.split(" ", 1)[1] if " " in auth else auth
-    payload: Any = await introspect(token)
-    # introspect may return Any; ensure dict[str, Any] for callers
+    # Use centralized introspection via get_current_user dependency. This
+    # will raise HTTPException(401) on missing/invalid tokens which matches
+    # previous behavior.
+    payload = await get_current_user(request)
     if not isinstance(payload, dict):
         return {}
     payload_typed = cast(dict[str, Any], payload)

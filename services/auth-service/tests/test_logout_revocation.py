@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.auth import create_token, router as auth_router
+from app.auth import create_token
+from app.auth import router as auth_router
 
 
 def test_logout_revokes_token():

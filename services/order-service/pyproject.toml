@@ -32,9 +32,11 @@ asyncio_mode = "auto"
 target-version = "py313"
 line-length = 88
 
+
 [tool.ruff.lint]
 select = ["E", "F", "W", "C90", "I", "N", "UP", "S"]
 ignore = ["E501"]
+per-file-ignores = { "tests/**" = ["S101"] }
 
 [tool.basedpyright]
 pythonVersion = "3.13"

@@ -1,6 +1,7 @@
-from fastapi.testclient import TestClient
-from app.main import app
 import httpx
+from fastapi.testclient import TestClient
+
+from app.main import app
 
 
 def test_gateway_logout_clears_cookies_and_revokes(monkeypatch):

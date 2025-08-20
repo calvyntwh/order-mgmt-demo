@@ -1,21 +1,22 @@
+import json
 import os
 import secrets
 from typing import Any, cast
 
 import httpx
-import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from .auth_proxy import introspect
-
 from .observability import (
-    setup_logging,
-    request_id_middleware,
     inject_request_id_headers,
+    request_id_middleware,
+    setup_logging,
 )
-
+from .security import (
+    build_auth_headers_from_request,
+    get_current_user_optional,
+)
 
 setup_logging()
 app = FastAPI(title="web-gateway")
@@ -104,21 +105,7 @@ def _normalize_list(obj: Any) -> list[dict[str, Any]]:
     return out
 
 
-def _build_auth_headers_from_request(request: Request) -> dict[str, str]:
-    """Extract an access token from cookie or Authorization header and
-    return a headers dict suitable for forwarding to upstream services.
-    """
-    token_val = request.cookies.get("access_token") or request.headers.get(
-        "Authorization"
-    )
-    headers: dict[str, str] = {}
-    if token_val:
-        sval = str(token_val)
-        if sval.lower().startswith("bearer "):
-            headers["Authorization"] = sval
-        else:
-            headers["Authorization"] = f"Bearer {sval}"
-    return headers
+# auth header building centralized in app/security.py
 
 
 @app.get("/health")
@@ -152,7 +139,9 @@ async def register(request: Request) -> Any:
 
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(None, request)
-        r = await client.post(f"{AUTH_SERVICE_URL}/register", json=data, headers=headers)
+        r = await client.post(
+            f"{AUTH_SERVICE_URL}/register", json=data, headers=headers
+        )
         if r.status_code == 201:
             return templates.TemplateResponse(
                 "login.html",
@@ -256,7 +245,7 @@ async def submit_order(request: Request) -> Any:
             status_code=403,
         )
 
-    headers = _build_auth_headers_from_request(request)
+    headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(headers, request)
         r = await client.post(
@@ -297,8 +286,9 @@ async def submit_order(request: Request) -> Any:
 @app.get("/orders", response_class=HTMLResponse)
 async def orders_page(request: Request) -> Any:
     # Fetch orders from backend
+    headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
-        headers = inject_request_id_headers(None, request)
+        headers = inject_request_id_headers(headers, request)
         r = await client.get(f"{ORDER_SERVICE_URL}/me", headers=headers)
         raw_payload: Any = r.json() if r.status_code == 200 else []
     orders = _normalize_list(raw_payload)
@@ -320,30 +310,13 @@ async def admin_page(request: Request) -> Any:
     Authorization header when present.
     """
 
-    # Extract token from Authorization header (Bearer) or cookie. If no
-    # token is present, redirect the browser to the login page.
-    def _extract_raw_token(req: Request) -> str | None:
-        incoming = req.headers.get("Authorization")
-        if incoming:
-            if incoming.lower().startswith("bearer "):
-                return incoming.split(" ", 1)[1]
-            return incoming
-        return req.cookies.get("access_token")
-
-    raw_token = _extract_raw_token(request)
-    if not raw_token:
+    # Use centralized dependency to optionally retrieve claims. If there is
+    # no valid token or introspection fails, `get_current_user_optional` will
+    # return None and we'll redirect to login as before.
+    claims = await get_current_user_optional(request)
+    if not claims:
         return RedirectResponse(url="/login", status_code=303)
-
-    # Validate token via auth service introspection. If introspection fails
-    # or the token is not an admin token, short-circuit with a redirect or
-    # 403-friendly page respectively.
-    try:
-        claims = await introspect(raw_token)
-    except httpx.HTTPError:
-        return RedirectResponse(url="/login", status_code=303)
-    if not isinstance(claims, dict) or not claims.get("is_admin"):
-        # Render the admin page but include a message and 403 status so the
-        # user sees that admin rights are required.
+    if not claims.get("is_admin"):
         return templates.TemplateResponse(
             "admin.html",
             {
@@ -356,7 +329,7 @@ async def admin_page(request: Request) -> Any:
         )
 
     # Build headers for proxying to order-service using the validated token
-    headers: dict[str, str] = {"Authorization": f"Bearer {raw_token}"}
+    headers = await build_auth_headers_from_request(request)
 
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(headers, request)
@@ -380,22 +353,12 @@ async def admin_page(request: Request) -> Any:
 
 @app.post("/admin/{order_id}/approve")
 async def admin_approve(order_id: str, request: Request) -> Any:
-    def _extract_raw_token(req: Request) -> str | None:
-        incoming = req.headers.get("Authorization")
-        if incoming:
-            if incoming.lower().startswith("bearer "):
-                return incoming.split(" ", 1)[1]
-            return incoming
-        return req.cookies.get("access_token")
-
-    raw_token = _extract_raw_token(request)
-    if not raw_token:
+    # Use centralized dependency and require admin privileges. We still
+    # enforce CSRF for form POSTs when using cookie auth.
+    claims = await get_current_user_optional(request)
+    if not claims:
         return RedirectResponse(url="/login", status_code=303)
-    try:
-        claims = await introspect(raw_token)
-    except httpx.HTTPError:
-        return RedirectResponse(url="/login", status_code=303)
-    if not isinstance(claims, dict) or not claims.get("is_admin"):
+    if not claims.get("is_admin"):
         return templates.TemplateResponse(
             "admin.html",
             {
@@ -407,7 +370,6 @@ async def admin_approve(order_id: str, request: Request) -> Any:
             status_code=403,
         )
 
-    # For form POSTs, enforce CSRF when using cookie auth
     if not await _verify_csrf(request, None):
         return templates.TemplateResponse(
             "admin.html",
@@ -420,7 +382,7 @@ async def admin_approve(order_id: str, request: Request) -> Any:
             status_code=403,
         )
 
-    headers = {"Authorization": f"Bearer {raw_token}"}
+    headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(headers, request)
         await client.post(
@@ -432,22 +394,10 @@ async def admin_approve(order_id: str, request: Request) -> Any:
 
 @app.post("/admin/{order_id}/reject")
 async def admin_reject(order_id: str, request: Request) -> Any:
-    def _extract_raw_token(req: Request) -> str | None:
-        incoming = req.headers.get("Authorization")
-        if incoming:
-            if incoming.lower().startswith("bearer "):
-                return incoming.split(" ", 1)[1]
-            return incoming
-        return req.cookies.get("access_token")
-
-    raw_token = _extract_raw_token(request)
-    if not raw_token:
+    claims = await get_current_user_optional(request)
+    if not claims:
         return RedirectResponse(url="/login", status_code=303)
-    try:
-        claims = await introspect(raw_token)
-    except httpx.HTTPError:
-        return RedirectResponse(url="/login", status_code=303)
-    if not isinstance(claims, dict) or not claims.get("is_admin"):
+    if not claims.get("is_admin"):
         return templates.TemplateResponse(
             "admin.html",
             {
@@ -471,7 +421,7 @@ async def admin_reject(order_id: str, request: Request) -> Any:
             status_code=403,
         )
 
-    headers = {"Authorization": f"Bearer {raw_token}"}
+    headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(headers, request)
         await client.post(
@@ -486,14 +436,8 @@ async def gateway_logout(request: Request) -> Any:
     """Logout endpoint for browser flow: call auth-service /logout then
     clear auth cookies and redirect to login page.
     """
-    # extract raw token from cookie or header
-    raw = request.cookies.get("access_token") or request.headers.get("Authorization")
-    headers = {}
-    if raw:
-        if raw.lower().startswith("bearer "):
-            headers["Authorization"] = raw
-        else:
-            headers["Authorization"] = f"Bearer {raw}"
+    # Build headers from request to forward token (cookie or Authorization header)
+    headers = await build_auth_headers_from_request(request)
 
     # forward to auth service to mark token revoked
     async with httpx.AsyncClient() as client:

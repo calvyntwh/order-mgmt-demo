@@ -84,7 +84,7 @@
   - Tests: unit tests added/updated to assert `X-Request-ID` appears on responses and that structlog binding does not raise; auth/order/web-gateway test suites pass locally after these changes.
     - References: structlog production config (JSONRenderer), prometheus_client `make_asgi_app()`, and OpenTelemetry/span exemplar guidance.
 
-- [-] [6] Centralize token extraction/validation in web-gateway
+- [x] [6] Centralize token extraction/validation in web-gateway
   - Add a dependency/util to extract & validate tokens (cookie or header) and return claims.
   - Replace duplicated logic in `services/web-gateway/app/main.py` handlers.
 
@@ -94,7 +94,8 @@
     - References: FastAPI dependency patterns for security (Depends, Security) and Pydantic for typed claim models.
   - Subtasks:
     - Add an explicit `/admin` auth guard in `web-gateway` that redirects unauthenticated users to `/login` (implement using the centralized `get_current_user` dependency).
-
+    
+  - Status: Done — implemented centralized helpers in `services/web-gateway/app/security.py` (`_extract_raw_token`, `get_current_user`, `get_current_user_optional`, `require_admin`, `build_auth_headers_from_request`) and updated gateway handlers (`app/main.py` and `app/routes.py`) to use them; request-id propagation added for outbound calls. Unit tests run locally: `auth-service` 16 passed, `order-service` 6 passed, `web-gateway` 13 passed.
 - [ ] [7] Input validation & error handling
   - Replace manual casts with Pydantic models and return 400 on invalid inputs (e.g., quantity parsing).
   - Add unit tests for invalid inputs.

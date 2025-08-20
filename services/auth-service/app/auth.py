@@ -1,12 +1,11 @@
+import base64
+import binascii
 import os
 import time
 from collections.abc import Callable
 from typing import Any
-import threading
 
 import bcrypt
-import base64
-import binascii
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

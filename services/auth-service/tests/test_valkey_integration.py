@@ -1,7 +1,7 @@
 import threading
 import time
 import uuid
-from typing import Dict, Any
+from typing import Any
 
 import pytest
 
@@ -9,7 +9,7 @@ from app import session_store
 
 
 class DummyResponse:
-    def __init__(self, status_code: int, json_data: Dict[str, Any] | None = None):
+    def __init__(self, status_code: int, json_data: dict[str, Any] | None = None):
         self.status_code = status_code
         self._json = json_data or {}
 
@@ -32,11 +32,11 @@ class DummySession:
     """
 
     def __init__(self):
-        self._store: Dict[str, Dict[str, Any]] = {}
+        self._store: dict[str, dict[str, Any]] = {}
         self._lock = threading.Lock()
 
     def post(
-        self, url: str, json: Dict[str, Any] | None = None, timeout: int | None = None
+        self, url: str, json: dict[str, Any] | None = None, timeout: int | None = None
     ):
         path = url.split("//", 1)[-1].split("/", 1)[-1]
         if path == "sessions":

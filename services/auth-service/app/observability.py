@@ -1,7 +1,7 @@
 import logging
 import sys
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from fastapi import Request

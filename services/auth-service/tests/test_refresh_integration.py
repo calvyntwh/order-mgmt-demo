@@ -1,5 +1,5 @@
-import pytest
 import threading
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -26,7 +26,7 @@ class FakeCursor:
         # helper: psycopg/psycopg_pool often passes parameters as a single tuple
         # (e.g. execute(query, (val,))). Normalize to the actual values.
         def _first_param(params):
-            if len(params) == 1 and isinstance(params[0], (list, tuple)):
+            if len(params) == 1 and isinstance(params[0], list | tuple):
                 return params[0][0]
             return params[0]
 
@@ -48,7 +48,7 @@ class FakeCursor:
             # psycopg_pool passes params as a single tuple, so handle both cases
             p = (
                 params[0]
-                if len(params) == 1 and isinstance(params[0], (list, tuple))
+                if len(params) == 1 and isinstance(params[0], list | tuple)
                 else params
             )
             username, password_hash = p

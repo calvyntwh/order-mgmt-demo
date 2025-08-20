@@ -1,8 +1,8 @@
 from typing import Any, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
 import httpx
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # pydantic BaseModel/Field not needed here; OrderCreate imported from models

@@ -35,9 +35,12 @@ asyncio_mode = "auto"
 target-version = "py313"
 line-length = 88
 
+
 [tool.ruff.lint]
 select = ["E", "F", "W", "C90", "I", "N", "UP", "S"]
 ignore = ["E501"]
+# allow the dev-only secret literal check in settings (S105) — it's an explicit dev guard
+per-file-ignores = { "tests/**" = ["S101"], "app/settings.py" = ["S105"] }
 
 [tool.basedpyright]
 pythonVersion = "3.13"

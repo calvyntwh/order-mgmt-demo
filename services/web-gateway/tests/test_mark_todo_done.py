@@ -7,7 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.mark_todo_done import mark_todo_done_file
+from scripts.mark_todo_done import mark_todo_done_file  # noqa: E402
 
 
 def make_todo(tmp_path, contents: str) -> Path:

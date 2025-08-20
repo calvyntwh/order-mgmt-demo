@@ -1,24 +1,29 @@
+import json
 import logging
 import sys
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
-import json
 from fastapi import Request
 
 
 def setup_logging() -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso")
+
     # Processor to print JSON to stdout so pytest's capfd can capture it. This
     # is intentionally simple for the demo tests and avoids relying solely on
     # the stdlib logging capture which pytest may separate from stdout.
     def _print_json(_, __, event_dict):
         try:
             sys.stdout.write(json.dumps(event_dict) + "\n")
-        except Exception:
-            pass
+        except Exception as exc:
+            # Avoid swallowing errors silently; emit a debug-level structlog
+            # entry so linting is satisfied and failures are visible during tests.
+            logger = structlog.get_logger()
+            logger.debug("failed to write structlog JSON to stdout", exc_info=exc)
         return event_dict
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

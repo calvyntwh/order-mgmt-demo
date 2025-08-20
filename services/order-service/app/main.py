@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .db import close_db_pool, init_db_pool
+from .observability import request_id_middleware, setup_logging
 from .orders import router as orders_router
-from .observability import setup_logging, request_id_middleware
 
 
 @asynccontextmanager

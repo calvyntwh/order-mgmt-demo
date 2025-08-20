@@ -1,17 +1,14 @@
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI
 
-import structlog
-
 from .auth import router as auth_router
-from .observability import setup_logging, request_id_middleware
+from .observability import request_id_middleware, setup_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import logging
-
     # Initialize logging early so startup errors are captured in structured logs
     setup_logging()
 
@@ -26,7 +23,7 @@ async def lifespan(app: FastAPI):
 
         await init_db_pool()
         await ensure_admin()
-    except Exception as exc:
+    except Exception:
         # Use structured logging so startup errors include request/context info
         structlog.get_logger().exception("Error during startup")
         # re-raise so failing startup is visible to supervisors/CI
@@ -36,7 +33,7 @@ async def lifespan(app: FastAPI):
         from .db import close_db_pool
 
         await close_db_pool()
-    except Exception as exc:
+    except Exception:
         structlog.get_logger().exception("Error during shutdown")
 
 

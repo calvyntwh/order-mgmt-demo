@@ -1,7 +1,7 @@
 import os
 import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -14,11 +14,11 @@ class SessionStore:
     """
 
     def store_refresh_token(
-        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+        self, refresh_token: str, session_data: dict[str, Any], ttl_seconds: int
     ) -> None:
         raise NotImplementedError()
 
-    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> Optional[str]:
+    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> str | None:
         """Atomically rotate a refresh token across processes.
 
         Return the new refresh token on success, or None on failure (e.g., if
@@ -32,7 +32,7 @@ class SessionStore:
     def is_refresh_revoked(self, refresh_token: str) -> bool:
         raise NotImplementedError()
 
-    def get_session(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, refresh_token: str) -> dict[str, Any] | None:
         raise NotImplementedError()
 
 
@@ -41,17 +41,17 @@ class InMemorySessionStore(SessionStore):
 
     def __init__(self) -> None:
         # refresh_token -> session record
-        self._store: Dict[str, Dict[str, Any]] = {}
+        self._store: dict[str, dict[str, Any]] = {}
 
     def store_refresh_token(
-        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+        self, refresh_token: str, session_data: dict[str, Any], ttl_seconds: int
     ) -> None:
         self._store[refresh_token] = {
             "data": session_data,
             "expires_at": time.time() + ttl_seconds,
         }
 
-    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> Optional[str]:
+    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> str | None:
         rec = self._store.get(old_token)
         if not rec:
             return None
@@ -77,7 +77,7 @@ class InMemorySessionStore(SessionStore):
             return True
         return False
 
-    def get_session(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, refresh_token: str) -> dict[str, Any] | None:
         if self.is_refresh_revoked(refresh_token):
             return None
         return self._store.get(refresh_token, {}).get("data")
@@ -105,7 +105,7 @@ class ValkeySessionStore(SessionStore):
     """
 
     def __init__(
-        self, base_url: str, api_key: Optional[str] = None, timeout: int = 5
+        self, base_url: str, api_key: str | None = None, timeout: int = 5
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.session = httpx.Client()
@@ -117,7 +117,7 @@ class ValkeySessionStore(SessionStore):
         return f"{self.base_url}{path}"
 
     def store_refresh_token(
-        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+        self, refresh_token: str, session_data: dict[str, Any], ttl_seconds: int
     ) -> None:
         url = self._url("/sessions")
         body = {
@@ -128,7 +128,7 @@ class ValkeySessionStore(SessionStore):
         r = self.session.post(url, json=body, timeout=self.timeout)
         r.raise_for_status()
 
-    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> Optional[str]:
+    def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> str | None:
         url = self._url("/sessions/rotate")
         body = {"old_token": old_token, "ttl": ttl_seconds}
         r = self.session.post(url, json=body, timeout=self.timeout)
@@ -153,7 +153,7 @@ class ValkeySessionStore(SessionStore):
         r.raise_for_status()
         return False
 
-    def get_session(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, refresh_token: str) -> dict[str, Any] | None:
         url = self._url(f"/sessions/{refresh_token}")
         r = self.session.get(url, timeout=self.timeout)
         if r.status_code == 404:
