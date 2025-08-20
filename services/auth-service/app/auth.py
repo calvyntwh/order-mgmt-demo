@@ -2,8 +2,10 @@ import os
 import time
 from collections.abc import Callable
 from typing import Any
+import threading
 
 import bcrypt
+import base64
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -14,12 +16,54 @@ from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel
 
 from .db import get_db_pool
+from .session_store import get_session_store
 
 security = HTTPBearer()
 router = APIRouter()
 
+# Simple in-memory token revocation store for MVP/demo.
+# This is intentionally lightweight and process-local. For production
+# use a centralized session store (Redis, Valkey) so revocations persist
+# across processes and restarts.
+REVOKED_TOKENS: set[str] = set()
+
+
+def revoke_token(token: str) -> None:
+    """Mark the raw token string as revoked."""
+    REVOKED_TOKENS.add(token)
+
+
+def is_revoked(token: str) -> bool:
+    return token in REVOKED_TOKENS
+
+
+# Pluggable session store (Valkey or in-memory fallback)
+SESSION_STORE = get_session_store()
+# TTL for refresh tokens (seconds); default 7 days
+REFRESH_TTL = int(os.getenv("JWT_REFRESH_EXPIRE_SECONDS", "604800"))
+
+
+def store_refresh_token(refresh_token: str, sub: str, username: str = "", is_admin: bool = False) -> None:
+    session_data = {"sub": sub, "username": username, "is_admin": is_admin}
+    SESSION_STORE.store_refresh_token(refresh_token, session_data, REFRESH_TTL)
+
+
+def revoke_refresh_token(refresh_token: str) -> None:
+    SESSION_STORE.revoke_refresh_token(refresh_token)
+
+
+def is_refresh_revoked(refresh_token: str) -> bool:
+    return SESSION_STORE.is_refresh_revoked(refresh_token)
+
+
+def rotate_refresh_token(old_token: str) -> str | None:
+    """Delegate rotation to the session store implementation."""
+    return SESSION_STORE.rotate_refresh_token(old_token, REFRESH_TTL)
+
 
 def _decode_token(token: str) -> dict[str, Any]:
+    if is_revoked(token):
+        raise HTTPException(status_code=401, detail="token revoked")
     try:
         secret = os.getenv("JWT_SECRET", "dev-secret")
         alg = os.getenv("JWT_ALGORITHM", "HS256")
@@ -57,6 +101,10 @@ class TokenOut(BaseModel):
     )
 
 
+class TokenWithRefresh(TokenOut):
+    refresh_token: str
+
+
 @router.post("/register", status_code=201)
 async def register(payload: RegisterIn) -> dict[str, Any]:
     pool: AsyncConnectionPool | None = get_db_pool()
@@ -79,7 +127,7 @@ async def register(payload: RegisterIn) -> dict[str, Any]:
             return {"username": payload.username}
 
 
-@router.post("/token", response_model=TokenOut)
+@router.post("/token", response_model=TokenWithRefresh)
 async def token(form: RegisterIn) -> dict[str, Any]:
     pool: AsyncConnectionPool | None = get_db_pool()
     if pool is None:
@@ -103,14 +151,46 @@ async def token(form: RegisterIn) -> dict[str, Any]:
                 username=form.username,
                 is_admin=bool(row[2]),
             )
-            return {"access_token": token}
+            # issue refresh token for session management
+            import secrets
+
+            refresh_token = secrets.token_urlsafe(32)
+            # record session claims so refresh can issue correct access tokens
+            store_refresh_token(refresh_token, sub=str(row[0]), username=form.username, is_admin=bool(row[2]))
+            return {"access_token": token, "refresh_token": refresh_token}
+
+
+
+@router.post("/refresh", response_model=TokenWithRefresh)
+async def refresh(payload: dict[str, str]) -> dict[str, Any]:
+    """Rotate refresh token and issue a new access token + refresh token.
+
+    Expect JSON: {"refresh_token": "..."}
+    """
+    old = payload.get("refresh_token")
+    if not old:
+        raise HTTPException(status_code=400, detail="missing refresh_token")
+    if is_refresh_revoked(old):
+        raise HTTPException(status_code=401, detail="invalid refresh token")
+    # rotate
+    new_refresh = rotate_refresh_token(old)
+    if new_refresh is None:
+        raise HTTPException(status_code=401, detail="invalid refresh token")
+    session = SESSION_STORE.get_session(new_refresh) or {}
+    sub = session.get("sub")
+    username = session.get("username", "")
+    is_admin = session.get("is_admin", False)
+    # create new access token using stored session claims
+    token = create_token(sub=sub, username=username, is_admin=is_admin)
+    return {"access_token": token, "refresh_token": new_refresh}
 
 
 async def _hash_password(password: str) -> str:
     hashed: bytes = await __to_thread(
         bcrypt.hashpw, password.encode("utf-8"), bcrypt.gensalt()
     )
-    return hashed.decode("utf-8")
+    # bcrypt returns raw bytes that are not valid UTF-8; store safely using base64
+    return base64.b64encode(hashed).decode("ascii")
 
 
 async def __to_thread(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -121,7 +201,9 @@ async def __to_thread(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
 
 def _verify_password(password: str, hashed: str) -> bool:
     try:
-        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+        # stored hash is base64-encoded
+        decoded = base64.b64decode(hashed.encode("ascii"))
+        return bcrypt.checkpw(password.encode("utf-8"), decoded)
     except Exception:
         return False
 
@@ -152,5 +234,6 @@ async def introspect(
 async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict[str, str]:
-    # For MVP, just accept the token and return success (no blacklist implemented)
+    token = credentials.credentials
+    revoke_token(token)
     return {"message": "logged out"}

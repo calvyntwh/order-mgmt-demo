@@ -1,4 +1,5 @@
 import os
+import secrets
 from typing import Any, cast
 
 import httpx
@@ -12,6 +13,58 @@ app = FastAPI(title="web-gateway")
 templates = Jinja2Templates(directory="app/templates")
 ORDER_SERVICE_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth-service:8001")
+
+
+def _is_secure_cookie(request: Request) -> bool:
+    """Decide whether to set Secure=True on cookies.
+
+    Prefer explicit production env or an upstream proxy header indicating TLS.
+    """
+    if os.environ.get("ENV") == "production":
+        return True
+    proto = request.headers.get("x-forwarded-proto", "").lower()
+    if proto == "https":
+        return True
+    # Fallback: rely on request.url.scheme if available
+    return request.url.scheme == "https"
+
+
+async def _verify_csrf(request: Request, form: dict | None) -> bool:
+    """Double-submit CSRF check for cookie-based authentication.
+
+    Returns True when request is allowed. If an Authorization header is
+    present (API client), CSRF is not required. If using cookie-based auth,
+    require a matching `csrf_token` form value and `csrf_token` cookie.
+    """
+    # If client provided Authorization header, assume bearer usage (no CSRF)
+    if request.headers.get("Authorization"):
+        return True
+
+    # If no access_token cookie, nothing to verify here (anonymous POSTs allowed elsewhere)
+    if not request.cookies.get("access_token"):
+        return True
+
+    # Ensure form and cookie CSRF tokens match
+    if form is None:
+        try:
+            f = await request.form()
+            form = {k: v for k, v in f.items()}
+        except Exception:
+            return False
+
+    # Accept both plain dicts and FormData-like objects that implement .get()
+    cookie_tok = request.cookies.get("csrf_token")
+    form_tok = None
+    try:
+        if isinstance(form, dict):
+            form_tok = form.get("csrf_token")
+        elif hasattr(form, "get"):
+            # starlette.datastructures.FormData exposes .get()
+            form_tok = form.get("csrf_token")
+    except Exception:
+        form_tok = None
+
+    return bool(cookie_tok and form_tok and cookie_tok == form_tok)
 
 
 def _normalize_mapping(obj: Any) -> dict[str, Any]:
@@ -124,11 +177,36 @@ async def login(request: Request) -> Any:
                 token = None
             response = RedirectResponse(url="/orders", status_code=303)
             if token:
+                # set cookie flags: HttpOnly always; Secure when running under TLS/prod
+                secure_flag = _is_secure_cookie(request)
+                # Set a double-submit CSRF cookie to protect browser form posts
+                csrf = secrets.token_urlsafe(32)
                 response.set_cookie(
                     key="access_token",
                     value=token,
                     httponly=True,
                     samesite="lax",
+                    secure=secure_flag,
+                )
+                # If upstream issued a refresh_token, persist it in an HttpOnly cookie
+                try:
+                    refresh = r.json().get("refresh_token")
+                except Exception:
+                    refresh = None
+                if refresh:
+                    response.set_cookie(
+                        key="refresh_token",
+                        value=refresh,
+                        httponly=True,
+                        samesite="lax",
+                        secure=secure_flag,
+                    )
+                response.set_cookie(
+                    key="csrf_token",
+                    value=csrf,
+                    httponly=False,
+                    samesite="lax",
+                    secure=secure_flag,
                 )
             return response
         else:
@@ -157,6 +235,14 @@ async def submit_order(request: Request) -> Any:
         "quantity": int(quantity_value),
         "notes": form.get("notes") or None,
     }
+
+    # Verify CSRF for cookie-based auth
+    if not await _verify_csrf(request, form):
+        return templates.TemplateResponse(
+            "order.html",
+            {"request": request, "orders": [], "message": "CSRF verification failed."},
+            status_code=403,
+        )
 
     headers = _build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
@@ -299,6 +385,14 @@ async def admin_approve(order_id: str, request: Request) -> Any:
             status_code=403,
         )
 
+    # For form POSTs, enforce CSRF when using cookie auth
+    if not await _verify_csrf(request, None):
+        return templates.TemplateResponse(
+            "admin.html",
+            {"request": request, "orders": [], "status_code": 403, "message": "CSRF verification failed."},
+            status_code=403,
+        )
+
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
         await client.post(
@@ -337,6 +431,13 @@ async def admin_reject(order_id: str, request: Request) -> Any:
             status_code=403,
         )
 
+    if not await _verify_csrf(request, None):
+        return templates.TemplateResponse(
+            "admin.html",
+            {"request": request, "orders": [], "status_code": 403, "message": "CSRF verification failed."},
+            status_code=403,
+        )
+
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
         await client.post(
@@ -344,3 +445,33 @@ async def admin_reject(order_id: str, request: Request) -> Any:
         )
 
     return RedirectResponse(url="/admin", status_code=303)
+
+
+@app.post("/logout")
+async def gateway_logout(request: Request) -> Any:
+    """Logout endpoint for browser flow: call auth-service /logout then
+    clear auth cookies and redirect to login page.
+    """
+    # extract raw token from cookie or header
+    raw = request.cookies.get("access_token") or request.headers.get("Authorization")
+    headers = {}
+    if raw:
+        if raw.lower().startswith("bearer "):
+            headers["Authorization"] = raw
+        else:
+            headers["Authorization"] = f"Bearer {raw}"
+
+    # forward to auth service to mark token revoked
+    async with httpx.AsyncClient() as client:
+        try:
+            await client.post(f"{AUTH_SERVICE_URL}/logout", headers=headers)
+        except Exception:
+            # ignore failures; proceed to clear cookies
+            pass
+
+    response = RedirectResponse(url="/login", status_code=303)
+    # clear cookies client-side
+    response.delete_cookie("access_token")
+    response.delete_cookie("csrf_token")
+    response.delete_cookie("refresh_token")
+    return response
