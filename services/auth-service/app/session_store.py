@@ -13,7 +13,9 @@ class SessionStore:
     codebase. Implementations should provide process-safe, durable storage.
     """
 
-    def store_refresh_token(self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int) -> None:
+    def store_refresh_token(
+        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+    ) -> None:
         raise NotImplementedError()
 
     def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> Optional[str]:
@@ -41,8 +43,13 @@ class InMemorySessionStore(SessionStore):
         # refresh_token -> session record
         self._store: Dict[str, Dict[str, Any]] = {}
 
-    def store_refresh_token(self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int) -> None:
-        self._store[refresh_token] = {"data": session_data, "expires_at": time.time() + ttl_seconds}
+    def store_refresh_token(
+        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+    ) -> None:
+        self._store[refresh_token] = {
+            "data": session_data,
+            "expires_at": time.time() + ttl_seconds,
+        }
 
     def rotate_refresh_token(self, old_token: str, ttl_seconds: int) -> Optional[str]:
         rec = self._store.get(old_token)
@@ -51,7 +58,10 @@ class InMemorySessionStore(SessionStore):
         # revoke old, create new
         new_token = uuid.uuid4().hex
         self._store.pop(old_token, None)
-        self._store[new_token] = {"data": rec["data"], "expires_at": time.time() + ttl_seconds}
+        self._store[new_token] = {
+            "data": rec["data"],
+            "expires_at": time.time() + ttl_seconds,
+        }
         return new_token
 
     def revoke_refresh_token(self, refresh_token: str) -> None:
@@ -94,7 +104,9 @@ class ValkeySessionStore(SessionStore):
     If your Valkey deployment exposes different paths, adapt this class.
     """
 
-    def __init__(self, base_url: str, api_key: Optional[str] = None, timeout: int = 5) -> None:
+    def __init__(
+        self, base_url: str, api_key: Optional[str] = None, timeout: int = 5
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.session = httpx.Client()
         self.timeout = timeout
@@ -104,9 +116,15 @@ class ValkeySessionStore(SessionStore):
     def _url(self, path: str) -> str:
         return f"{self.base_url}{path}"
 
-    def store_refresh_token(self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int) -> None:
+    def store_refresh_token(
+        self, refresh_token: str, session_data: Dict[str, Any], ttl_seconds: int
+    ) -> None:
         url = self._url("/sessions")
-        body = {"refresh_token": refresh_token, "session": session_data, "ttl": ttl_seconds}
+        body = {
+            "refresh_token": refresh_token,
+            "session": session_data,
+            "ttl": ttl_seconds,
+        }
         r = self.session.post(url, json=body, timeout=self.timeout)
         r.raise_for_status()
 

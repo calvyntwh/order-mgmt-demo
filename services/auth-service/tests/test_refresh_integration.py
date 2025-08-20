@@ -22,6 +22,7 @@ class FakeCursor:
         # support two queries used by tests: SELECT id FROM users WHERE username
         # and INSERT INTO users (username, password_hash)
         q = query.strip().upper()
+
         # helper: psycopg/psycopg_pool often passes parameters as a single tuple
         # (e.g. execute(query, (val,))). Normalize to the actual values.
         def _first_param(params):
@@ -40,16 +41,24 @@ class FakeCursor:
             username = _first_param(params)
             user = self.pool.users.get(username)
             if user:
-                self._last = (user["id"], user["password_hash"], user["is_admin"]) 
+                self._last = (user["id"], user["password_hash"], user["is_admin"])
             else:
                 self._last = None
         elif q.startswith("INSERT INTO USERS"):
             # psycopg_pool passes params as a single tuple, so handle both cases
-            p = params[0] if len(params) == 1 and isinstance(params[0], (list, tuple)) else params
+            p = (
+                params[0]
+                if len(params) == 1 and isinstance(params[0], (list, tuple))
+                else params
+            )
             username, password_hash = p
             uid = str(self.pool.next_id)
             self.pool.next_id += 1
-            self.pool.users[username] = {"id": uid, "password_hash": password_hash, "is_admin": False}
+            self.pool.users[username] = {
+                "id": uid,
+                "password_hash": password_hash,
+                "is_admin": False,
+            }
             self._last = None
         else:
             self._last = None

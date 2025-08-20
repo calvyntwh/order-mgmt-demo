@@ -43,6 +43,7 @@ async def ensure_admin() -> None:
         )
         password_hash: str = hashed.decode("utf-8")
     except Exception as exc:  # pragma: no cover - defensive
+        # Hashing failed unexpectedly — log with structured context and abort
         logger.exception("admin-bootstrap.hash-failed", error=str(exc))
         return
 
@@ -66,6 +67,7 @@ async def ensure_admin() -> None:
                 )
                 logger.info("admin-bootstrap.created", username=admin_user)
     except Exception as exc:  # pragma: no cover - environment dependent
+        # Database interaction failed — log with structured context for observability
         logger.exception("admin-bootstrap.failed", error=str(exc))
     finally:
         await pool.close()

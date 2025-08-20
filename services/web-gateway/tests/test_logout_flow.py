@@ -26,7 +26,9 @@ def test_gateway_logout_clears_cookies_and_revokes(monkeypatch):
         async def post(self, url, json=None, headers=None):
             self.calls.append(("post", url, json, headers))
             if url.endswith("/token"):
-                return DummyResp(200, {"access_token": "tok-access", "refresh_token": "tok-refresh"})
+                return DummyResp(
+                    200, {"access_token": "tok-access", "refresh_token": "tok-refresh"}
+                )
             if url.endswith("/logout"):
                 return DummyResp(200, {"message": "logged out"})
             return DummyResp(404)
@@ -43,7 +45,9 @@ def test_gateway_logout_clears_cookies_and_revokes(monkeypatch):
     r = client.post("/register", json={"username": "u1", "password": "p"})
     assert r.status_code in (200, 201)
 
-    r = client.post("/login", json={"username": "u1", "password": "p"}, follow_redirects=False)
+    r = client.post(
+        "/login", json={"username": "u1", "password": "p"}, follow_redirects=False
+    )
     assert r.status_code == 303
     # refresh_token stored as cookie
     assert client.cookies.get("refresh_token") == "tok-refresh"

@@ -14,7 +14,7 @@ def fast_bcrypt(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
 
     try:
         import bcrypt as _bcrypt
-    except Exception:
+    except ImportError:
         # If bcrypt isn't importable for some reason, nothing to patch.
         yield
         return

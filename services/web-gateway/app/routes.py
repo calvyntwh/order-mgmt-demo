@@ -1,5 +1,5 @@
 from typing import Any, cast
-
+import json
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -53,7 +53,9 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
     # Accept JSON body (fetch/XHR) or HTML form submissions
     try:
         data: Any = await request.json()
-    except Exception:
+    except (ValueError, json.JSONDecodeError):
+        # request.json() may raise JSONDecodeError or ValueError for invalid bodies;
+        # fall back to form parsing for browser form submissions.
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
@@ -73,7 +75,7 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
         r = await client.post(f"{ORDER_URL}/orders/", json=data, headers=headers)
         try:
             raw: Any = r.json()
-        except Exception:
+        except ValueError:
             raw = None
         payload: dict[str, Any] | None = None
         if raw is not None:
@@ -109,7 +111,7 @@ async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
         r = await client.get(f"{ORDER_URL}/orders/me", headers=headers)
         try:
             raw: Any = r.json()
-        except Exception:
+        except ValueError:
             raw = []
         payload = _normalize_list(raw)
         # Normalize any returned order ids to strings and return concrete list
@@ -127,7 +129,9 @@ async def register(request: Request) -> Any:
     # Accept JSON or form data
     try:
         data: Any = await request.json()
-    except Exception:
+    except (ValueError, json.JSONDecodeError):
+        # request.json() may raise JSONDecodeError or ValueError for invalid bodies;
+        # fall back to form parsing for browser form submissions.
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
@@ -145,7 +149,7 @@ async def register(request: Request) -> Any:
             # Defensive parsing of error message
             try:
                 msg = r.json().get("detail", "Registration failed.")
-            except Exception:
+            except ValueError:
                 msg = "Registration failed."
             return templates.TemplateResponse(
                 "register.html", {"request": request, "message": msg}
@@ -157,7 +161,7 @@ async def login(request: Request) -> Any:
     # Accept JSON or form data
     try:
         data: Any = await request.json()
-    except Exception:
+    except (ValueError, json.JSONDecodeError):
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
@@ -167,7 +171,7 @@ async def login(request: Request) -> Any:
             # Extract access token and set as HttpOnly cookie for browser flows
             try:
                 token = r.json().get("access_token")
-            except Exception:
+            except ValueError:
                 token = None
             response = RedirectResponse(url="/orders", status_code=303)
             if token:
@@ -182,7 +186,7 @@ async def login(request: Request) -> Any:
         else:
             try:
                 msg = r.json().get("detail", "Login failed.")
-            except Exception:
+            except ValueError:
                 msg = "Login failed."
             return templates.TemplateResponse(
                 "login.html", {"request": request, "message": msg}

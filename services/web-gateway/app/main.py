@@ -10,7 +10,11 @@ from fastapi.templating import Jinja2Templates
 
 from .auth_proxy import introspect
 
-from .observability import setup_logging, request_id_middleware
+from .observability import (
+    setup_logging,
+    request_id_middleware,
+    inject_request_id_headers,
+)
 
 
 setup_logging()
@@ -55,7 +59,7 @@ async def _verify_csrf(request: Request, form: dict | None) -> bool:
         try:
             f = await request.form()
             form = {k: v for k, v in f.items()}
-        except Exception:
+        except (ValueError, RuntimeError):
             return False
 
     # Accept both plain dicts and FormData-like objects that implement .get()
@@ -67,7 +71,7 @@ async def _verify_csrf(request: Request, form: dict | None) -> bool:
         elif hasattr(form, "get"):
             # starlette.datastructures.FormData exposes .get()
             form_tok = form.get("csrf_token")
-    except Exception:
+    except (AttributeError, TypeError):
         form_tok = None
 
     return bool(cookie_tok and form_tok and cookie_tok == form_tok)
@@ -147,7 +151,8 @@ async def register(request: Request) -> Any:
         data = {k: v for k, v in form.items()}
 
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{AUTH_SERVICE_URL}/register", json=data)
+        headers = inject_request_id_headers(None, request)
+        r = await client.post(f"{AUTH_SERVICE_URL}/register", json=data, headers=headers)
         if r.status_code == 201:
             return templates.TemplateResponse(
                 "login.html",
@@ -175,7 +180,8 @@ async def login(request: Request) -> Any:
         data = {k: v for k, v in form.items()}
 
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{AUTH_SERVICE_URL}/token", json=data)
+        headers = inject_request_id_headers(None, request)
+        r = await client.post(f"{AUTH_SERVICE_URL}/token", json=data, headers=headers)
         if r.status_code == 200:
             try:
                 token = r.json().get("access_token")
@@ -252,7 +258,10 @@ async def submit_order(request: Request) -> Any:
 
     headers = _build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
-        r = await client.post(f"{ORDER_SERVICE_URL}/orders/", json=data, headers=headers)
+        headers = inject_request_id_headers(headers, request)
+        r = await client.post(
+            f"{ORDER_SERVICE_URL}/orders/", json=data, headers=headers
+        )
         try:
             raw_err = r.json()
         except ValueError:
@@ -260,10 +269,15 @@ async def submit_order(request: Request) -> Any:
         message = (
             "Order created successfully."
             if r.status_code == 201
-            else (raw_err.get("detail") if isinstance(raw_err, dict) else "Order creation failed.")
+            else (
+                raw_err.get("detail")
+                if isinstance(raw_err, dict)
+                else "Order creation failed."
+            )
         )
 
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         r_orders = await client.get(f"{ORDER_SERVICE_URL}/orders/me", headers=headers)
         try:
             raw: Any = r_orders.json() if r_orders.status_code == 200 else []
@@ -284,7 +298,8 @@ async def submit_order(request: Request) -> Any:
 async def orders_page(request: Request) -> Any:
     # Fetch orders from backend
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{ORDER_SERVICE_URL}/me")
+        headers = inject_request_id_headers(None, request)
+        r = await client.get(f"{ORDER_SERVICE_URL}/me", headers=headers)
         raw_payload: Any = r.json() if r.status_code == 200 else []
     orders = _normalize_list(raw_payload)
     for o in orders:
@@ -324,7 +339,7 @@ async def admin_page(request: Request) -> Any:
     # 403-friendly page respectively.
     try:
         claims = await introspect(raw_token)
-    except Exception:
+    except httpx.HTTPError:
         return RedirectResponse(url="/login", status_code=303)
     if not isinstance(claims, dict) or not claims.get("is_admin"):
         # Render the admin page but include a message and 403 status so the
@@ -344,11 +359,12 @@ async def admin_page(request: Request) -> Any:
     headers: dict[str, str] = {"Authorization": f"Bearer {raw_token}"}
 
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         r = await client.get(f"{ORDER_SERVICE_URL}/orders/admin", headers=headers)
         status_code = r.status_code
         try:
             raw: Any = r.json() if status_code == 200 else []
-        except Exception:
+        except ValueError:
             raw = []
 
     orders = _normalize_list(raw)
@@ -377,7 +393,7 @@ async def admin_approve(order_id: str, request: Request) -> Any:
         return RedirectResponse(url="/login", status_code=303)
     try:
         claims = await introspect(raw_token)
-    except Exception:
+    except httpx.HTTPError:
         return RedirectResponse(url="/login", status_code=303)
     if not isinstance(claims, dict) or not claims.get("is_admin"):
         return templates.TemplateResponse(
@@ -395,12 +411,18 @@ async def admin_approve(order_id: str, request: Request) -> Any:
     if not await _verify_csrf(request, None):
         return templates.TemplateResponse(
             "admin.html",
-            {"request": request, "orders": [], "status_code": 403, "message": "CSRF verification failed."},
+            {
+                "request": request,
+                "orders": [],
+                "status_code": 403,
+                "message": "CSRF verification failed.",
+            },
             status_code=403,
         )
 
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         await client.post(
             f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers
         )
@@ -423,7 +445,7 @@ async def admin_reject(order_id: str, request: Request) -> Any:
         return RedirectResponse(url="/login", status_code=303)
     try:
         claims = await introspect(raw_token)
-    except Exception:
+    except httpx.HTTPError:
         return RedirectResponse(url="/login", status_code=303)
     if not isinstance(claims, dict) or not claims.get("is_admin"):
         return templates.TemplateResponse(
@@ -440,12 +462,18 @@ async def admin_reject(order_id: str, request: Request) -> Any:
     if not await _verify_csrf(request, None):
         return templates.TemplateResponse(
             "admin.html",
-            {"request": request, "orders": [], "status_code": 403, "message": "CSRF verification failed."},
+            {
+                "request": request,
+                "orders": [],
+                "status_code": 403,
+                "message": "CSRF verification failed.",
+            },
             status_code=403,
         )
 
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
+        headers = inject_request_id_headers(headers, request)
         await client.post(
             f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers
         )
@@ -470,9 +498,10 @@ async def gateway_logout(request: Request) -> Any:
     # forward to auth service to mark token revoked
     async with httpx.AsyncClient() as client:
         try:
+            headers = inject_request_id_headers(headers, request)
             await client.post(f"{AUTH_SERVICE_URL}/logout", headers=headers)
-        except Exception:
-            # ignore failures; proceed to clear cookies
+        except httpx.HTTPError:
+            # ignore upstream failures; proceed to clear cookies
             pass
 
     response = RedirectResponse(url="/login", status_code=303)

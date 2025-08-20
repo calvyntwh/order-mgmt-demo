@@ -15,7 +15,11 @@ class Settings:
         """
         if self.ENV != "development":
             secret = (self.JWT_SECRET or "").strip()
-            if not secret or secret == "dev-secret" or len(secret) < self.MIN_SECRET_LENGTH:
+            if (
+                not secret
+                or secret == "dev-secret"
+                or len(secret) < self.MIN_SECRET_LENGTH
+            ):
                 raise SystemExit("Invalid JWT_SECRET for non-development environment")
 
 

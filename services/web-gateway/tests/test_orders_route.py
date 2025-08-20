@@ -34,7 +34,9 @@ class DummyClient:
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
         return False
 
-    async def get(self, url: str, headers: dict[str, str] | None = None) -> DummyResponse:
+    async def get(
+        self, url: str, headers: dict[str, str] | None = None
+    ) -> DummyResponse:
         # record the observed url and headers so the test can assert on them
         self._seen["url"] = url
         self._seen["headers"] = dict(headers or {})

@@ -19,8 +19,8 @@ def test_refresh_rotates_token():
     from app.auth import store_refresh_token, is_refresh_revoked, rotate_refresh_token
 
     # simulate storing refresh token for user 'u1'
-    old = 'rt-old-test'
-    store_refresh_token(old, sub='u1')
+    old = "rt-old-test"
+    store_refresh_token(old, sub="u1")
     assert not is_refresh_revoked(old)
 
     new = rotate_refresh_token(old)

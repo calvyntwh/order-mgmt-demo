@@ -6,6 +6,7 @@ import threading
 
 import bcrypt
 import base64
+import binascii
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -43,7 +44,9 @@ SESSION_STORE = get_session_store()
 REFRESH_TTL = int(os.getenv("JWT_REFRESH_EXPIRE_SECONDS", "604800"))
 
 
-def store_refresh_token(refresh_token: str, sub: str, username: str = "", is_admin: bool = False) -> None:
+def store_refresh_token(
+    refresh_token: str, sub: str, username: str = "", is_admin: bool = False
+) -> None:
     session_data = {"sub": sub, "username": username, "is_admin": is_admin}
     SESSION_STORE.store_refresh_token(refresh_token, session_data, REFRESH_TTL)
 
@@ -70,7 +73,7 @@ def _decode_token(token: str) -> dict[str, Any]:
         return jwt.decode(token, secret, algorithms=[alg])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="token expired")
-    except Exception:
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="invalid token")
 
 
@@ -156,9 +159,13 @@ async def token(form: RegisterIn) -> dict[str, Any]:
 
             refresh_token = secrets.token_urlsafe(32)
             # record session claims so refresh can issue correct access tokens
-            store_refresh_token(refresh_token, sub=str(row[0]), username=form.username, is_admin=bool(row[2]))
+            store_refresh_token(
+                refresh_token,
+                sub=str(row[0]),
+                username=form.username,
+                is_admin=bool(row[2]),
+            )
             return {"access_token": token, "refresh_token": refresh_token}
-
 
 
 @router.post("/refresh", response_model=TokenWithRefresh)
@@ -204,7 +211,8 @@ def _verify_password(password: str, hashed: str) -> bool:
         # stored hash is base64-encoded
         decoded = base64.b64decode(hashed.encode("ascii"))
         return bcrypt.checkpw(password.encode("utf-8"), decoded)
-    except Exception:
+    except (binascii.Error, TypeError, ValueError):
+        # decoding failed or wrong types; treat as verification failure
         return False
 
 

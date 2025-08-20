@@ -11,8 +11,8 @@ from scripts.mark_todo_done import mark_todo_done_file
 
 
 def make_todo(tmp_path, contents: str) -> Path:
-    p = tmp_path / 'todo.md'
-    p.write_text(contents, encoding='utf8')
+    p = tmp_path / "todo.md"
+    p.write_text(contents, encoding="utf8")
     return p
 
 
@@ -21,12 +21,12 @@ def test_mark_by_id_exact(tmp_path):
 - [ ] [2] Second task
 """
     p = make_todo(tmp_path, contents)
-    changed = mark_todo_done_file(p, '2')
+    changed = mark_todo_done_file(p, "2")
     assert len(changed) == 1
-    text = p.read_text(encoding='utf8')
-    assert '- [x] [2] Second task' in text
+    text = p.read_text(encoding="utf8")
+    assert "- [x] [2] Second task" in text
     # next unchecked should be advanced to In-Progress ([-]) if present
-    assert '- [-]' in text or text.count('- [ ]') >= 0
+    assert "- [-]" in text or text.count("- [ ]") >= 0
 
 
 def test_mark_by_substring(tmp_path):
@@ -34,12 +34,12 @@ def test_mark_by_substring(tmp_path):
 - [ ] Another task
 """
     p = make_todo(tmp_path, contents)
-    changed = mark_todo_done_file(p, 'gateway')
+    changed = mark_todo_done_file(p, "gateway")
     assert len(changed) == 1
-    content = p.read_text(encoding='utf8')
-    assert '- [x] Fix gateway issue' in content
+    content = p.read_text(encoding="utf8")
+    assert "- [x] Fix gateway issue" in content
     # next unchecked should be advanced to In-Progress by default
-    assert '- [-]' in content or content.count('- [ ]') >= 0
+    assert "- [-]" in content or content.count("- [ ]") >= 0
 
 
 def test_mark_all_flag(tmp_path):
@@ -47,9 +47,9 @@ def test_mark_all_flag(tmp_path):
 - [ ] common task B
 """
     p = make_todo(tmp_path, contents)
-    changed = mark_todo_done_file(p, 'common', mark_all=True)
+    changed = mark_todo_done_file(p, "common", mark_all=True)
     assert len(changed) == 2
-    text = p.read_text(encoding='utf8')
-    assert text.count('- [x]') == 2
+    text = p.read_text(encoding="utf8")
+    assert text.count("- [x]") == 2
     # no remaining unchecked lines, so no advancement expected
-    assert '- [-]' not in text
+    assert "- [-]" not in text

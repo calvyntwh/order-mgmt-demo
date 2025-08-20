@@ -2,6 +2,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+import httpx
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # pydantic BaseModel/Field not needed here; OrderCreate imported from models
@@ -90,7 +91,7 @@ async def get_current_user(
     try:
         payload = await introspect_token(token)
         return payload
-    except Exception:
+    except httpx.HTTPError:
         raise HTTPException(status_code=401, detail="invalid token")
 
 
@@ -302,4 +303,3 @@ async def get_order(
     if user_id_val != user.get("sub") and not user.get("is_admin"):
         raise HTTPException(status_code=403, detail="forbidden")
     return order_result
-

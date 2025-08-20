@@ -29,7 +29,9 @@ class DummyClient:
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
         return False
 
-    async def post(self, url: str, json: Any | None = None, headers: dict[str, str] | None = None) -> DummyResponse:
+    async def post(
+        self, url: str, json: Any | None = None, headers: dict[str, str] | None = None
+    ) -> DummyResponse:
         # token exchange endpoint (auth-service)
         if url.endswith("/token"):
             return DummyResponse({"access_token": "fake-token"}, status_code=200)
@@ -38,7 +40,9 @@ class DummyClient:
             return DummyResponse({"id": "o-created"}, status_code=201)
         return DummyResponse({}, status_code=200)
 
-    async def get(self, url: str, headers: dict[str, str] | None = None) -> DummyResponse:
+    async def get(
+        self, url: str, headers: dict[str, str] | None = None
+    ) -> DummyResponse:
         # orders fetch
         if url.endswith("/orders/me") or url.endswith("/me"):
             return DummyResponse([{"id": "o1", "item_name": "x"}], status_code=200)
@@ -58,7 +62,9 @@ def test_login_sets_secure_cookie_when_env_production(monkeypatch):
 
     client = TestClient(app)
     # Don't follow the redirect so we can inspect Set-Cookie headers on the response
-    r = client.post("/login", json={"username": "u", "password": "p"}, follow_redirects=False)
+    r = client.post(
+        "/login", json={"username": "u", "password": "p"}, follow_redirects=False
+    )
     assert r.status_code in (302, 303)
     set_cookie = r.headers.get("set-cookie", "")
     # at least one cookie should include Secure when ENV=production
@@ -78,7 +84,11 @@ def test_submit_order_rejects_missing_csrf(monkeypatch):
     # set only access_token cookie (no csrf_token)
     client.cookies.set("access_token", "raw-token")
 
-    r = client.post("/order", data={"item_name": "x", "quantity": "1"}, headers={"content-type": "application/x-www-form-urlencoded"})
+    r = client.post(
+        "/order",
+        data={"item_name": "x", "quantity": "1"},
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
     assert r.status_code == 403
     assert "CSRF verification failed" in r.text
 
@@ -94,6 +104,10 @@ def test_submit_order_allows_with_csrf(monkeypatch):
     client.cookies.set("access_token", "raw-token")
     client.cookies.set("csrf_token", "tok-csrf")
 
-    r = client.post("/order", data={"item_name": "x", "quantity": "1", "csrf_token": "tok-csrf"}, headers={"content-type": "application/x-www-form-urlencoded"})
+    r = client.post(
+        "/order",
+        data={"item_name": "x", "quantity": "1", "csrf_token": "tok-csrf"},
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
     assert r.status_code == 200
     assert "Order created successfully" in r.text

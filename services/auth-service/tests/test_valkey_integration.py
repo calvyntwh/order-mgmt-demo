@@ -15,7 +15,7 @@ class DummyResponse:
 
     def json(self):
         return self._json
-    
+
     def raise_for_status(self):
         if self.status_code >= 400:
             raise Exception(f"HTTP {self.status_code}")
@@ -35,11 +35,16 @@ class DummySession:
         self._store: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.Lock()
 
-    def post(self, url: str, json: Dict[str, Any] | None = None, timeout: int | None = None):
+    def post(
+        self, url: str, json: Dict[str, Any] | None = None, timeout: int | None = None
+    ):
         path = url.split("//", 1)[-1].split("/", 1)[-1]
         if path == "sessions":
             token = json["refresh_token"]
-            self._store[token] = {"session": json["session"], "expires_at": time.time() + json.get("ttl", 0)}
+            self._store[token] = {
+                "session": json["session"],
+                "expires_at": time.time() + json.get("ttl", 0),
+            }
             return DummyResponse(200, {})
         if path == "sessions/rotate":
             old = json["old_token"]
@@ -51,7 +56,10 @@ class DummySession:
                 # rotate: remove old, add new with same session
                 new = uuid.uuid4().hex
                 self._store.pop(old, None)
-                self._store[new] = {"session": rec["session"], "expires_at": time.time() + ttl}
+                self._store[new] = {
+                    "session": rec["session"],
+                    "expires_at": time.time() + ttl,
+                }
                 return DummyResponse(200, {"new_token": new})
         if path == "sessions/revoke":
             tok = json["token"]
