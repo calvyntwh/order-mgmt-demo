@@ -190,8 +190,10 @@
 - [x] [16] Configure service networking and discovery for local compose / test environments
   - Ensure services can address each other by service name; document required hostnames/ports for CI and dev.
 
-- [ ] [17] Complete DB migrations & seed data rollout
+- [x] [17] Complete DB migrations & seed data rollout
   - Finalize alembic (or chosen tool) configs for `auth-service` and `order-service` and add initial migrations and seed fixtures for CI tests.
+  - Done: Added Alembic scaffolding for `auth-service` and `order-service`, initial revisions that apply the SQL initializers in `infra/postgres`, and a seed SQL for auth-service. Updated `Makefile` `migrate*` targets to prefer Alembic and fall back to the existing SQL apply script. See `services/migrations/README.md` for usage.
+
 
 - [ ] [18] Configure pytest + coverage for all services
   - Add per-service pytest config and CI steps for auth-service, order-service, and web-gateway.

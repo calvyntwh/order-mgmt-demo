@@ -68,15 +68,38 @@ test:
 .PHONY: migrate migrate-auth migrate-order
 migrate:
 	@echo "Run both auth and order SQL initializers against DATABASE_URL"
-	python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql infra/postgres/init-orders.sql
+	@python3 -c "import importlib.util,sys
+	try:
+		importlib.import_module('alembic')
+		print('Alembic available - running alembic upgrade for services')
+		sys.exit(0)
+	except Exception:
+		print('Alembic not found - falling back to SQL initializers')
+		sys.exit(1)" || python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql infra/postgres/init-orders.sql
 
 migrate-auth:
 	@echo "Apply auth DB init SQL"
-	python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql
+	@python3 -c "import importlib
+	try:
+		importlib.import_module('alembic')
+		alembic_cmd='alembic -c services/auth-service/alembic.ini upgrade head'
+		print('Running:', alembic_cmd)
+		import os
+		os.system(alembic_cmd)
+	except Exception:
+		python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql"
 
 migrate-order:
 	@echo "Apply order DB init SQL"
-	python3 scripts/apply_migrations.py --files infra/postgres/init-orders.sql
+	@python3 -c "import importlib
+	try:
+		importlib.import_module('alembic')
+		alembic_cmd='alembic -c services/order-service/alembic.ini upgrade head'
+		print('Running:', alembic_cmd)
+		import os
+		os.system(alembic_cmd)
+	except Exception:
+		python3 scripts/apply_migrations.py --files infra/postgres/init-orders.sql"
 
 
 .PHONY: test-mark-todo
