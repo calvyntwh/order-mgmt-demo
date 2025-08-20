@@ -4,14 +4,14 @@ FROM python:3.13.6-slim
 # NOTE: for maximum reproducibility replace the tag with a digest (sha256:...)
 # Patch OS packages (reduce known CVEs like zlib) and install curl for health checks
 # This upgrades packages from the base image to the latest available in the distro
+ENV UV_INSTALL_DIR=/usr/local/bin
+ENV PATH=/usr/local/bin:$PATH
+ARG UV_VERSION=0.8.12
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends curl ca-certificates libpq5 \
+  && curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s -- $UV_VERSION \
   && rm -rf /var/lib/apt/lists/*
-
-# Install uv via the official installer (use curl to avoid storing a fetched file in the image)
-ENV UV_INSTALL_DIR=/usr/local/bin
-RUN curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s --
 
 # Non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser

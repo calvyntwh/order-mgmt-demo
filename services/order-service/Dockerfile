@@ -2,14 +2,14 @@ FROM python:3.13.6-slim
 
 # Install uv using the official installer (avoids depending on a GHCR tag)
 # Upgrade OS packages and install curl + ca-certificates
+ENV UV_INSTALL_DIR=/usr/local/bin
+ENV PATH=/usr/local/bin:$PATH
+ARG UV_VERSION=0.8.12
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends curl ca-certificates libpq5 \
+  && curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s -- $UV_VERSION \
   && rm -rf /var/lib/apt/lists/*
-
-# Install uv into /usr/local/bin so the `uv` binary is on PATH
-ENV UV_INSTALL_DIR=/usr/local/bin
-RUN curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s --
 
 # Non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
