@@ -1,7 +1,3 @@
-import json
-import uuid
-import importlib.util
-from pathlib import Path
 
 import pytest
 
@@ -76,7 +72,7 @@ def make_store():
 
 def test_store_and_get_session():
     s = make_store()
-    token = "t1"
+    token = "t1"  # noqa: S105 - test literal token
     data = {"user_id": 1}
     s.store_refresh_token(token, data, ttl_seconds=60)
     got = s.get_session(token)
@@ -85,7 +81,7 @@ def test_store_and_get_session():
 
 def test_is_refresh_revoked_and_revoke():
     s = make_store()
-    token = "t2"
+    token = "t2"  # noqa: S105 - test literal token
     assert s.is_refresh_revoked(token) is True
     s.store_refresh_token(token, {"user_id": 2}, ttl_seconds=60)
     assert s.is_refresh_revoked(token) is False
@@ -95,7 +91,7 @@ def test_is_refresh_revoked_and_revoke():
 
 def test_rotate_refresh_token():
     s = make_store()
-    old = "oldtok"
+    old = "oldtok"  # noqa: S105 - test literal token
     s.store_refresh_token(old, {"user_id": 3}, ttl_seconds=60)
     new = s.rotate_refresh_token(old, ttl_seconds=120)
     assert new is not None and new != old

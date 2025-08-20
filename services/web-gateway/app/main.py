@@ -2,23 +2,23 @@ import json
 import os
 import secrets
 from typing import Any, cast
-from pydantic import ValidationError
 
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 
 from .observability import (
     inject_request_id_headers,
     request_id_middleware,
     setup_logging,
 )
+from .schemas import OrderForm
 from .security import (
     build_auth_headers_from_request,
     get_current_user_optional,
 )
-from .schemas import OrderForm
 
 setup_logging()
 app = FastAPI(title="web-gateway")

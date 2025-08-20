@@ -1,12 +1,11 @@
+import json
 import os
 import time
 import uuid
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
-import json
-import uuid
-from urllib.parse import urlparse
 
 # Defer importing the optional `valkey` library until runtime to avoid static
 # analysis errors when the dependency isn't installed in the editor environment.
@@ -119,7 +118,9 @@ class ValkeySessionStore(SessionStore):
     If your Valkey deployment exposes different paths, adapt this class.
     """
 
-    def __init__(self, base_url: str, api_key: str | None = None, timeout: int = 5) -> None:
+    def __init__(
+        self, base_url: str, api_key: str | None = None, timeout: int = 5
+    ) -> None:
         # Support two Valkey URL forms for flexibility:
         # - HTTP-based control plane (http(s)://host:port) -> fall back to HTTP client
         # - native valkey URL (valkey://host:port/db) -> use valkey-py client
@@ -132,7 +133,9 @@ class ValkeySessionStore(SessionStore):
         # service can run against a Valkey container without the Python
         # dependency. Otherwise, if valkey is available and a valkey:// URL
         # is provided, use the native client for better performance.
-        if parsed.scheme in ("http", "https") or (parsed.scheme == "valkey" and valkey is None):
+        if parsed.scheme in ("http", "https") or (
+            parsed.scheme == "valkey" and valkey is None
+        ):
             self._mode = "http"
             # Convert valkey://host:port[/db] -> http://host:port for the
             # HTTP control plane fallback when necessary.
@@ -160,7 +163,9 @@ class ValkeySessionStore(SessionStore):
                 except ValueError:
                     db = 0
             # decode_responses so we receive strings
-            self.client = valkey.Valkey(host=host, port=port, db=db, decode_responses=True)
+            self.client = valkey.Valkey(
+                host=host, port=port, db=db, decode_responses=True
+            )
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}{path}"

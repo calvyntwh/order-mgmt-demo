@@ -56,7 +56,9 @@ async def ready() -> dict[str, str]:
         return {"status": "ready", "service": "auth-service"}
     from fastapi.responses import JSONResponse
 
-    return JSONResponse({"status": "not ready", "service": "auth-service"}, status_code=503)
+    return JSONResponse(
+        {"status": "not ready", "service": "auth-service"}, status_code=503
+    )
 
 
 @app.get("/")

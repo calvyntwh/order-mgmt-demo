@@ -1,8 +1,9 @@
+import logging
 import os
 import time
 
-import pytest
 import httpx
+import pytest
 
 
 @pytest.mark.skipif(
@@ -21,13 +22,14 @@ def test_login_refresh_logout_against_compose():
 
     # basic retry/wait for service readiness
     deadline = time.time() + 30
+    logger = logging.getLogger(__name__)
     while time.time() < deadline:
         try:
             r = httpx.get(f"{auth_url}/health", timeout=2)
             if r.status_code == 200:
                 break
-        except Exception:
-            pass
+        except Exception as exc:  # log and retry
+            logger.debug("health check attempt failed: %s", exc)
         time.sleep(1)
     else:
         pytest.skip("Auth service not available on localhost:8001")

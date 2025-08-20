@@ -18,7 +18,7 @@ class FakeCursor:
         q = query.strip().upper()
 
         def _first_param(params):
-            if len(params) == 1 and isinstance(params[0], (list, tuple)):
+            if len(params) == 1 and isinstance(params[0], list | tuple):
                 return params[0][0]
             return params[0]
 
@@ -39,7 +39,7 @@ class FakeCursor:
         elif q.startswith("INSERT INTO USERS"):
             p = (
                 params[0]
-                if len(params) == 1 and isinstance(params[0], (list, tuple))
+                if len(params) == 1 and isinstance(params[0], list | tuple)
                 else params
             )
             username, password_hash = p
@@ -104,8 +104,9 @@ def test_token_response_matches_declared_schema() -> None:
     tokens = create_user_and_get_tokens(client)
 
     # Import the Pydantic response model and validate the received JSON
-    from app.auth import TokenWithRefresh
     from pydantic import ValidationError
+
+    from app.auth import TokenWithRefresh
 
     try:
         # model_validate will raise on invalid data (pydantic v2)
