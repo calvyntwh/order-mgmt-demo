@@ -133,9 +133,21 @@
 
     - Note: The script requires `psycopg` (psycopg3) in the runtime environment used by CI. The script will print an instruction if the package is missing.
 
-- [ ] [10] Integration/e2e tests & CI job
-  - Add integration tests that exercise gateway→auth→order flows using test DB and migrations.
-  - Add a CI job to run the integration suite.
+- [x] [10] Integration/e2e tests & CI job
+  - Added a lightweight integration smoke test and a GitHub Actions workflow that:
+    - spins up the `docker-compose.mvp.yml` stack,
+    - waits for health endpoints,
+    - applies SQL initializers (via `scripts/apply_migrations.py`),
+    - runs `tests/test_integration_smoke.py` which re-uses `scripts/e2e_smoke.py`.
+
+  - Files added:
+    - `tests/test_integration_smoke.py` — async pytest wrapper around the smoke script.
+    - `.github/workflows/integration.yml` — CI workflow that builds the compose stack and runs the smoke test.
+
+  - Verification/notes:
+    - The workflow is intended for GitHub Actions; runner uses docker-compose to bootstrap services.
+    - The workflow installs Python and runs the smoke test against localhost ports exposed by the compose stack.
+    - CI will need `psycopg` and other runtime packages available; the workflow installs `pytest` and `httpx` explicitly for the smoke run.
 
 - [x] [11] Server-side authorization enforcement
    - Ensure order-service performs role checks server-side (do not rely solely on gateway).
