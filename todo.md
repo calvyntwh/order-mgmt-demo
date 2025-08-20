@@ -187,7 +187,7 @@
     - Replace raw JWT cookie storage with Valkey-backed session tokens and a migration plan; this work depends on cookie hardening in [3] and token revocation/session strategies in [4].
     - Tests: add integration tests that verify login/logout flows with Valkey sessions and ensure refresh attempts for revoked sessions fail.
 
-- [ ] [16] Configure service networking and discovery for local compose / test environments
+- [x] [16] Configure service networking and discovery for local compose / test environments
   - Ensure services can address each other by service name; document required hostnames/ports for CI and dev.
 
 - [ ] [17] Complete DB migrations & seed data rollout
