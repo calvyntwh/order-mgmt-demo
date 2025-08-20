@@ -176,8 +176,9 @@
     - Add a short note to `todo.md` and service README sections documenting the required JWT algorithm (e.g., `HS256`) and rotation plan to be implemented post‑MVP.
     - Defer adding Trivy CI job and full crypto hardening until after the demo.
 
-- [ ] [14] Clean up tracker and CI hooks
+- [x] [14] Clean up tracker and CI hooks
   - Remove references to removed `update_tracker` script in CI/docs or update hooks to use `todo.md`.
+  - Implementation: removed references to `scripts/update_tracker.py` from documentation and updated local guidance to use `scripts/mark_todo_done.py` for marking items locally. The `update_tracker.py` script is not present in `scripts/`.
 
 - [ ] [15] Set up Valkey/session persistence and Docker Compose
   - Finish Valkey configuration for session management and ensure `docker-compose.mvp.yml` composes Valkey and Postgres reliably for local dev.
@@ -263,6 +264,6 @@ This implementation plan breaks down the comprehensive PRD and Technical Specifi
   - [`docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md`](docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md:1)
   - [`docs/archives/TASK_TRACKER-2025-08-20T0513.md`](docs/archives/TASK_TRACKER-2025-08-20T0513.md:1)
 
-- This file is the canonical tracker; update statuses here and run `scripts/update_tracker.py` to sync snapshots.
+This file is the canonical tracker; update statuses here. Use `scripts/mark_todo_done.py` to mark items locally (see its help text). Note: `scripts/update_tracker.py` was removed and is no longer used to sync snapshots.
 
 ---
