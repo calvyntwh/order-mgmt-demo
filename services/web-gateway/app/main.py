@@ -1,6 +1,7 @@
 import json
 import os
 import secrets
+from contextlib import asynccontextmanager
 from typing import Any, cast
 
 import httpx
@@ -21,7 +22,26 @@ from .security import (
 )
 
 setup_logging()
-app = FastAPI(title="web-gateway")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan manager so the app participates in startup/shutdown cycles.
+
+    This lets an external supervisor (uvicorn) trigger orderly shutdown
+    (for example on SIGTERM) and gives a dedicated place to close resources
+    if we add any long-lived clients later.
+    """
+    # Mark ready once the process finishes import-time initialization
+    app.state.ready = True
+    try:
+        yield
+    finally:
+        # Place to close global resources if added in the future.
+        pass
+
+
+app = FastAPI(title="web-gateway", lifespan=lifespan)
 app.middleware("http")(request_id_middleware)
 templates = Jinja2Templates(directory="app/templates")
 ORDER_SERVICE_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")

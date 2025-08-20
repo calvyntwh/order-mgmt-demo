@@ -9,18 +9,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends curl ca-certificates libpq5 \
   && rm -rf /var/lib/apt/lists/*
 
-# Download and run the official uv installer (pin to a version if you want reproducibility)
-# Install into /usr/local/bin so the `uv` binary is on PATH for subsequent RUN steps
+# Install uv via the official installer (use curl to avoid storing a fetched file in the image)
 ENV UV_INSTALL_DIR=/usr/local/bin
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-# Run installer without modifying shell profiles (safe for Docker images)
-RUN UV_NO_MODIFY_PATH=1 sh /uv-installer.sh && rm -f /uv-installer.sh
-# NOTE: for stricter reproducibility prefer using a base image that already includes
-# the patched packages or pin to an image digest after verifying the contents.
-RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
-  && apt-get install -y --no-install-recommends curl \
-  && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s --
 
 # Non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser

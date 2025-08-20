@@ -7,8 +7,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 ENV UV_INSTALL_DIR=/usr/local/bin
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN UV_NO_MODIFY_PATH=1 sh /uv-installer.sh && rm -f /uv-installer.sh
+RUN curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s --
 
 # Non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
