@@ -250,16 +250,6 @@
   - Test coverage uplift plan and reporting
   - Documentation: curl examples and verification steps for reviewers
 
-
-## Archived phased plan
-
-The phased breakdown previously used has been retired in favor of the single prioritized linear queue at the top of this file. The full, original phased plan and historical task tracker remain in the repo archives:
-
-- `docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md`
-- `docs/archives/TASK_TRACKER-2025-08-20T0513.md`
-
-If you want the phased sections restored as discrete tasks, tell me which phases to un-archive and I'll reinstate them as separate checklists.
-
 ## Appendix: Implementation Plan (full)
 
 # Order Management Demo - Implementation Plan
@@ -284,14 +274,14 @@ This implementation plan breaks down the comprehensive PRD and Technical Specifi
 - Phase 5: Integration & Quality Assurance  
 - Phase 6: Documentation & Demo Preparation
 
-(Full Implementation Plan archived in `docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md` and original `IMPLEMENTATION_PLAN.md`)
+ 
+- [x] [23] Security verification tasks (Post‑MVP)
+  - Performance benchmark script and p95 goals
+  - SQL injection / parameterized query verification and linters
+  - Test coverage uplift plan and reporting
+  - Documentation: curl examples and verification steps for reviewers
 
-## Notes & Archives
-
-- Full implementation plan and task tracker archived in `docs/archives/`:
-  - [`docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md`](docs/archives/IMPLEMENTATION_PLAN-2025-08-20T0510.md:1)
-  - [`docs/archives/TASK_TRACKER-2025-08-20T0513.md`](docs/archives/TASK_TRACKER-2025-08-20T0513.md:1)
-
-This file is the canonical tracker; update statuses here. Use `scripts/mark_todo_done.py` to mark items locally (see its help text). Note: `scripts/update_tracker.py` was removed and is no longer used to sync snapshots.
-
----
+  - Notes & acceptance criteria:
+    - Added `scripts/benchmark.py` (p50/p90/p95/p99 reporting).
+    - Added `scripts/sql_safety_check.py` (grep-based SQL concatenation checker).
+    - Added `docs/SECURITY_VERIFICATION.md` with curl examples, coverage plan, and CI suggestions.

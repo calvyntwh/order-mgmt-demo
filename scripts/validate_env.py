@@ -28,7 +28,8 @@ from typing import Dict, List
 
 
 MIN_JWT_SECRET_LEN = 32
-MIN_BCRYPT_ROUNDS = 10
+# Align bcrypt threshold with auth-service settings (recommend >= 12)
+MIN_BCRYPT_ROUNDS = 12
 
 
 def gen_random_secret(nbytes: int = 32) -> str:

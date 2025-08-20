@@ -48,6 +48,15 @@ env:
     python3 scripts/validate_env.py --ci
 ```
 
+### Required GitHub Secrets for CI
+
+Make sure the following repository secrets are set for the integration workflow to run successfully:
+
+- `JWT_SECRET` (string, >= 32 chars)
+- `DATABASE_URL` (Postgres connection URL used by integration tests)
+- `BCRYPT_ROUNDS` (integer, recommended `12`)
+
+
 If you need ephemeral credentials in CI (for example, creating a test database), generate them during the job and set `DATABASE_URL` accordingly before running the validator.
 
 ## Running the validator locally
