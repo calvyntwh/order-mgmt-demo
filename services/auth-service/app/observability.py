@@ -46,3 +46,19 @@ async def request_id_middleware(request: Request, call_next: Callable):
         response.headers["X-Request-ID"] = rid
         structlog.contextvars.clear_contextvars()
         return response
+
+
+def inject_request_id_headers(headers: dict | None, request: Request | None) -> dict:
+    """Return headers with X-Request-ID injected when available from request.state or structlog contextvars."""
+    out = dict(headers or {})
+    rid = None
+    if request is not None:
+        rid = getattr(request.state, "request_id", None)
+    if not rid:
+        try:
+            rid = structlog.contextvars.get_contextvars().get("request_id")
+        except Exception:
+            rid = None
+    if rid:
+        out["X-Request-ID"] = rid
+    return out
