@@ -23,6 +23,8 @@ async def lifespan(app: FastAPI):
 
         await init_db_pool()
         await ensure_admin()
+        # mark the app as ready once startup tasks complete
+        app.state.ready = True
     except Exception:
         # Use structured logging so startup errors include request/context info
         structlog.get_logger().exception("Error during startup")
@@ -45,6 +47,16 @@ app.include_router(auth_router)
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "auth-service"}
+
+
+@app.get("/ready")
+async def ready() -> dict[str, str]:
+    """Readiness probe: returns 200 when startup completed successfully."""
+    if getattr(app.state, "ready", False):
+        return {"status": "ready", "service": "auth-service"}
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse({"status": "not ready", "service": "auth-service"}, status_code=503)
 
 
 @app.get("/")

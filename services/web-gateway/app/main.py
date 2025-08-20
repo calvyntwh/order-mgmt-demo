@@ -115,6 +115,14 @@ async def health():
     return {"status": "ok", "service": "web-gateway"}
 
 
+@app.get("/ready")
+async def ready():
+    """Readiness probe: for the gateway we consider the app ready if
+    it has completed import-time initialization (templates available)."""
+    # The gateway has no async startup tasks; return ready
+    return {"status": "ready", "service": "web-gateway"}
+
+
 @app.get("/")
 async def root(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})

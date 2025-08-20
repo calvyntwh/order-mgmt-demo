@@ -10,6 +10,8 @@ from .orders import router as orders_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db_pool()
+    # mark ready after init
+    app.state.ready = True
     yield
     await close_db_pool()
 
@@ -23,6 +25,15 @@ app.include_router(orders_router)
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "order-service"}
+
+
+@app.get("/ready")
+async def ready() -> dict[str, str]:
+    if getattr(app.state, "ready", False):
+        return {"status": "ready", "service": "order-service"}
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse({"status": "not ready", "service": "order-service"}, status_code=503)
 
 
 @app.get("/")

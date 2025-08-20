@@ -155,13 +155,19 @@
   - Tests: `services/order-service/tests/test_authz.py` — new unit tests added to assert 403 for non-admins (list_user_orders and get_order ownership checks). Tests also save/restore `app.dependency_overrides` per-test to avoid leaking overrides between tests.
   - Verified: ran workspace lint + tests (auth-service, order-service, web-gateway) locally; all service test suites passed.
 
-- [-] [12] Structured logging, health, and metrics
-   - Keep it minimal for the demo: add basic `/health` and consistent structured log lines now; defer Prometheus/OTel instrumentation.
-   - Status: `/health` endpoint implemented in `web-gateway`, `auth-service`, and `order-service`; `/ready` and structured JSON logging (request-id propagation) remain TODO.
-   - Actions:
-     - Implement a lightweight `/health` (200 OK) and `/ready` endpoint in each service for the demo/runtime checks.
-     - Standardize a simple structured log line format (JSON or key=value) and ensure critical handlers include service, level, message, and request_id.
-     - Defer adding Prometheus `/metrics` endpoints and OTel tracing until post‑MVP.
+- [x] [12] Structured logging, health, and metrics
+   - Keep it minimal for the demo: add basic `/health` and `/ready` endpoints and consistent structured log lines now; defer Prometheus/OTel instrumentation.
+   - Status: Done — `/health` and `/ready` endpoints added and structured logging helpers exist in `services/*/app/observability.py`.
+   - Changes made:
+     - `services/auth-service/app/main.py`: readiness wiring added (`app.state.ready = True` after startup tasks) and `/ready` endpoint implemented.
+     - `services/order-service/app/main.py`: readiness wiring added in lifespan and `/ready` endpoint implemented.
+     - `services/web-gateway/app/main.py`: `/ready` endpoint added (gateway is ready at import time for the demo).
+     - Structured logging helpers and request-id middleware are present in `services/*/app/observability.py` and are wired via `app.middleware("http")(request_id_middleware)`.
+   - Notes & acceptance criteria:
+     - `/health` returns 200 OK quickly for liveness checks.
+     - `/ready` returns 200 only after startup tasks complete (auth/order) or immediately for the gateway.
+     - `X-Request-ID` header is injected into responses and propagated on outbound calls via `inject_request_id_headers()`.
+   - Deferred: Prometheus `/metrics` and OTel tracing remain TODO.
 
 - [ ] [13] Security hardening & scanning
   - Scope for demo: defer full security scanning (Trivy) and heavy crypto hardening, but make minimal, low-risk improvements now.
