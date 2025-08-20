@@ -6,7 +6,8 @@ from dataclasses import dataclass
 class Settings:
     JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-secret")
     ENV: str = os.getenv("ENV", "development")
-    MIN_SECRET_LENGTH: int = int(os.getenv("MIN_SECRET_LENGTH", "16"))
+    # Minimum required JWT secret length for non-development environments
+    MIN_SECRET_LENGTH: int = int(os.getenv("MIN_SECRET_LENGTH", "32"))
     # bcrypt work factor (cost). Keep a low default for fast local dev cycles,
     # but enforce a stronger minimum when not running in development.
     # Recommended production value: >= 12
