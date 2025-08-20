@@ -103,8 +103,12 @@
 
   - Status: Done — Implemented Pydantic validation in `services/web-gateway/app/schemas.py`, updated `submit_order` in `services/web-gateway/app/main.py` to return 400 on invalid inputs, and added `services/web-gateway/tests/test_invalid_order_input.py`. Ran format/lint/tests locally; all service tests passed.
 
-- [ ] [8] Response model & schema consistency
+- [x] [8] Response model & schema consistency
   - Ensure `/token` and other endpoints match declared `response_model` and add schema tests.
+
+  - Verification:
+    - Added `services/auth-service/tests/test_token_schema.py` and `services/auth-service/tests/test_refresh_schema.py` which validate `/token` and `/refresh` responses against the declared `TokenWithRefresh` Pydantic model.
+    - Ran auth-service tests: `18 passed` locally (includes the new schema tests).
 
 - [ ] [9] DB migrations + test infra
   - Add alembic (or equivalent) config for `auth-service` and `order-service` and initial migrations.
