@@ -96,9 +96,12 @@
     - Add an explicit `/admin` auth guard in `web-gateway` that redirects unauthenticated users to `/login` (implement using the centralized `get_current_user` dependency).
     
   - Status: Done — implemented centralized helpers in `services/web-gateway/app/security.py` (`_extract_raw_token`, `get_current_user`, `get_current_user_optional`, `require_admin`, `build_auth_headers_from_request`) and updated gateway handlers (`app/main.py` and `app/routes.py`) to use them; request-id propagation added for outbound calls. Unit tests run locally: `auth-service` 16 passed, `order-service` 6 passed, `web-gateway` 13 passed.
-- [ ] [7] Input validation & error handling
+
+- [x] [7] Input validation & error handling
   - Replace manual casts with Pydantic models and return 400 on invalid inputs (e.g., quantity parsing).
   - Add unit tests for invalid inputs.
+
+  - Status: Done — Implemented Pydantic validation in `services/web-gateway/app/schemas.py`, updated `submit_order` in `services/web-gateway/app/main.py` to return 400 on invalid inputs, and added `services/web-gateway/tests/test_invalid_order_input.py`. Ran format/lint/tests locally; all service tests passed.
 
 - [ ] [8] Response model & schema consistency
   - Ensure `/token` and other endpoints match declared `response_model` and add schema tests.

@@ -2,6 +2,7 @@ import json
 import os
 import secrets
 from typing import Any, cast
+from pydantic import ValidationError
 
 import httpx
 from fastapi import FastAPI, Request
@@ -17,6 +18,7 @@ from .security import (
     build_auth_headers_from_request,
     get_current_user_optional,
 )
+from .schemas import OrderForm
 
 setup_logging()
 app = FastAPI(title="web-gateway")
@@ -228,14 +230,21 @@ async def order_page(request: Request):
 @app.post("/order", response_class=HTMLResponse)
 async def submit_order(request: Request) -> Any:
     form = await request.form()
-    quantity_value = form.get("quantity")
-    if not isinstance(quantity_value, str):
-        quantity_value = "1"
-    data = {
-        "item_name": form.get("item_name"),
-        "quantity": int(quantity_value),
-        "notes": form.get("notes") or None,
-    }
+    # Convert FormData to a plain mapping for Pydantic parsing
+    form_map = {k: v for k, v in form.items()}
+    try:
+        order = OrderForm(**form_map)
+    except ValidationError as exc:
+        # Validation failed; return the order page with a 400 and error message
+        # Prefer the first error message for user display
+        errors = exc.errors()
+        msg = errors[0]["msg"] if errors else "Invalid input."
+        return templates.TemplateResponse(
+            "order.html",
+            {"request": request, "orders": [], "message": f"Invalid input: {msg}"},
+            status_code=400,
+        )
+    data = order.dict()
 
     # Verify CSRF for cookie-based auth
     if not await _verify_csrf(request, form):
