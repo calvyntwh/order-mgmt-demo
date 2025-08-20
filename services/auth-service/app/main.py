@@ -10,6 +10,11 @@ async def lifespan(app: FastAPI):
     import logging
 
     try:
+        # Validate critical runtime settings early
+        from .settings import settings as _settings
+
+        _settings.validate()
+
         from .bootstrap import ensure_admin
         from .db import init_db_pool
 

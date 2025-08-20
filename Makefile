@@ -64,6 +64,12 @@ lint-fix:
 test:
 	cd services/$(SERVICE) && PYTHONPATH=./ uv run pytest
 
+
+.PHONY: test-mark-todo
+test-mark-todo:
+	@echo "Running mark_todo tests from repo root (uses 'uv run')"
+	PYTHONPATH=. uv run pytest tests/test_mark_todo_done.py
+
 typecheck:
 	cd services/$(SERVICE) && uv run basedpyright .
 

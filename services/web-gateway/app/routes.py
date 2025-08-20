@@ -90,11 +90,23 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
 
 @router.get("/orders")
 async def list_orders(request: Request) -> tuple[list[dict[str, Any]], int]:
-    token = request.cookies.get("access_token") or request.headers.get("Authorization")
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    user_id = request.cookies.get("user_id") or "demo"  # fallback for MVP
+    # Prefer Authorization header first, fall back to access_token cookie. If a
+    # bare token value is provided (cookie), prefix with 'Bearer '. This keeps
+    # the gateway behavior consistent with other handlers that forward tokens.
+    token = request.headers.get("Authorization") or request.cookies.get("access_token")
+    headers: dict[str, str] = {}
+    if token:
+        sval = str(token)
+        if sval.lower().startswith("bearer "):
+            headers["Authorization"] = sval
+        else:
+            headers["Authorization"] = f"Bearer {sval}"
+
+    # Call the canonical per-user endpoint on order-service. This avoids
+    # ambiguity with parameterized routes like `/{order_id}` and matches the
+    # recommended canonical route `/orders/me` from the tracker.
     async with httpx.AsyncClient() as client:
-        r = await client.get(f"{ORDER_URL}/orders/user/{user_id}", headers=headers)
+        r = await client.get(f"{ORDER_URL}/orders/me", headers=headers)
         try:
             raw: Any = r.json()
         except Exception:
