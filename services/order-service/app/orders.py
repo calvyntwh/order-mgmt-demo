@@ -303,36 +303,3 @@ async def get_order(
         raise HTTPException(status_code=403, detail="forbidden")
     return order_result
 
-
-@router.get("/admin")
-async def list_all_orders(
-    status: str | None = None, _admin: dict[str, Any] = Depends(require_admin)
-) -> list[dict[str, Any]]:
-    pool = _resolve_pool(get_db_pool)
-    if pool is None:
-        raise HTTPException(status_code=500, detail="Database pool not available")
-    if status:
-        rows = await _execute_fetchall(
-            pool,
-            "SELECT id, user_id, item_name, quantity, status, created_at FROM orders WHERE status = %s ORDER BY created_at DESC",
-            (status,),
-        )
-    else:
-        rows = await _execute_fetchall(
-            pool,
-            "SELECT id, user_id, item_name, quantity, status, created_at FROM orders ORDER BY created_at DESC",
-        )
-    if rows and isinstance(rows[0], dict):
-        for r in rows:
-            r_map: dict[str, Any] = cast(dict[str, Any], r)
-            r_map["id"] = str(cast(Any, r_map.get("id")))
-        return rows
-    return [
-        dict(
-            zip(
-                ["id", "user_id", "item_name", "quantity", "status", "created_at"],
-                [str(r[0])] + list(r[1:]),
-            )
-        )
-        for r in rows
-    ]

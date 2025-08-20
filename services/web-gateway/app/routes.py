@@ -1,7 +1,7 @@
 from typing import Any, cast
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -58,7 +58,9 @@ async def create_order(request: Request) -> tuple[dict[str, Any] | None, int]:
         data = {k: v for k, v in form.items()}
 
     # Token may be stored in a cookie (access_token) or passed via Authorization header
-    token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
+    token_val = request.cookies.get("access_token") or request.headers.get(
+        "Authorization"
+    )
     headers = {}
     if token_val:
         # If header value already contains 'Bearer ', forward as-is; otherwise prefix

@@ -1,48 +1,50 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Admin - All Orders</h1>
-    {% if status_code != 200 %}
-      <div class="notification is-danger">Failed to fetch orders from order-service (status {{ status_code }})</div>
-    {% endif %}
-
-    {% if orders %}
-      <table class="table is-fullwidth">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>User</th>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for o in orders %}
-            <tr>
-              <td>{{ o.id }}</td>
-              <td>{{ o.user_id or '' }}</td>
-              <td>{{ o.item_name or '' }}</td>
-              <td>{{ o.quantity or '' }}</td>
-              <td>{{ o.status or '' }}</td>
-              <td>
-                <form method="post" action="/admin/{{ o.id }}/approve" style="display:inline">
-                  <button class="button is-small is-primary" type="submit">Approve</button>
-                </form>
-                <form method="post" action="/admin/{{ o.id }}/reject" style="display:inline">
-                  <button class="button is-small is-danger" type="submit">Reject</button>
-                </form>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div class="notification is-warning">No orders found.</div>
-    {% endif %}
-  </div>
-</section>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Admin - All Orders</h1>
+            {% if status_code != 200 %}
+                <div class="notification is-danger">Failed to fetch orders from order-service (status {{ status_code }})</div>
+            {% endif %}
+            {% if orders %}
+                <table class="table is-fullwidth">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in orders %}
+                            <tr>
+                                <td>{{ o.id }}</td>
+                                <td>{{ o.user_id or '' }}</td>
+                                <td>{{ o.item_name or '' }}</td>
+                                <td>{{ o.quantity or '' }}</td>
+                                <td>{{ o.status or '' }}</td>
+                                <td>
+                                    <form method="post"
+                                          action="/admin/{{ o.id }}/approve"
+                                          style="display:inline">
+                                        <button class="button is-small is-primary" type="submit">Approve</button>
+                                    </form>
+                                    <form method="post"
+                                          action="/admin/{{ o.id }}/reject"
+                                          style="display:inline">
+                                        <button class="button is-small is-danger" type="submit">Reject</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="notification is-warning">No orders found.</div>
+            {% endif %}
+        </div>
+    </section>
 {% endblock %}

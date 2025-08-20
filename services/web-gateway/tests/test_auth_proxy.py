@@ -3,10 +3,9 @@ from typing import Any
 import httpx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pytest_types import MonkeyPatch
 
 from app.routes import router as routes_router
-
-from pytest_types import MonkeyPatch
 
 app = FastAPI()
 app.include_router(routes_router)

@@ -5,6 +5,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
 from .auth_proxy import introspect
 
 app = FastAPI(title="web-gateway")
@@ -38,6 +39,23 @@ def _normalize_list(obj: Any) -> list[dict[str, Any]]:
         if isinstance(item, dict):
             out.append(_normalize_mapping(item))
     return out
+
+
+def _build_auth_headers_from_request(request: Request) -> dict[str, str]:
+    """Extract an access token from cookie or Authorization header and
+    return a headers dict suitable for forwarding to upstream services.
+    """
+    token_val = request.cookies.get("access_token") or request.headers.get(
+        "Authorization"
+    )
+    headers: dict[str, str] = {}
+    if token_val:
+        sval = str(token_val)
+        if sval.lower().startswith("bearer "):
+            headers["Authorization"] = sval
+        else:
+            headers["Authorization"] = f"Bearer {sval}"
+    return headers
 
 
 @app.get("/health")
@@ -74,7 +92,10 @@ async def register(request: Request) -> Any:
         if r.status_code == 201:
             return templates.TemplateResponse(
                 "login.html",
-                {"request": request, "message": "Registration successful. Please log in."},
+                {
+                    "request": request,
+                    "message": "Registration successful. Please log in.",
+                },
             )
         else:
             try:
@@ -130,58 +151,38 @@ async def submit_order(request: Request) -> Any:
     form = await request.form()
     quantity_value = form.get("quantity")
     if not isinstance(quantity_value, str):
-        quantity_value = "1"  # Default value if not a string
+        quantity_value = "1"
     data = {
         "item_name": form.get("item_name"),
         "quantity": int(quantity_value),
         "notes": form.get("notes") or None,
     }
-    async with httpx.AsyncClient() as client:
-        # Forward access token from cookie or Authorization header
-        token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
-        headers: dict[str, str] = {}
-        if token_val:
-            if str(token_val).lower().startswith("bearer "):
-                headers["Authorization"] = str(token_val)
-            else:
-                headers["Authorization"] = f"Bearer {token_val}"
 
+    headers = _build_auth_headers_from_request(request)
+    async with httpx.AsyncClient() as client:
         r = await client.post(f"{ORDER_SERVICE_URL}/orders/", json=data, headers=headers)
-        # Defensive parsing: backend may return non-JSON bodies on error
         try:
             raw_err = r.json()
         except Exception:
             raw_err = None
-        if r.status_code == 201:
-            message = "Order created successfully."
-        else:
-            if isinstance(raw_err, dict):
-                message = raw_err.get("detail", "Order creation failed.")
-            else:
-                message = "Order creation failed."
-    # Fetch orders after creation
-    async with httpx.AsyncClient() as client:
-        # Forward the same auth headers when listing orders
-        token_val = request.cookies.get("access_token") or request.headers.get("Authorization")
-        headers: dict[str, str] = {}
-        if token_val:
-            if str(token_val).lower().startswith("bearer "):
-                headers["Authorization"] = str(token_val)
-            else:
-                headers["Authorization"] = f"Bearer {token_val}"
+        message = (
+            "Order created successfully."
+            if r.status_code == 201
+            else (raw_err.get("detail") if isinstance(raw_err, dict) else "Order creation failed.")
+        )
 
+    async with httpx.AsyncClient() as client:
         r_orders = await client.get(f"{ORDER_SERVICE_URL}/orders/me", headers=headers)
         try:
             raw: Any = r_orders.json() if r_orders.status_code == 200 else []
         except Exception:
             raw = []
-        # Build a concrete list[dict[str, Any]] at runtime so the analyzer
-        # sees a consistent shape instead of Any | list[Unknown].
         orders = _normalize_list(raw)
         for o in orders:
             oid = o.get("id")
             if oid is not None:
                 o["id"] = str(oid)
+
     return templates.TemplateResponse(
         "orders.html", {"request": request, "orders": orders, "message": message}
     )
@@ -211,6 +212,7 @@ async def admin_page(request: Request) -> Any:
     access token stored in the HttpOnly cookie (set at login) or an
     Authorization header when present.
     """
+
     # Extract token from Authorization header (Bearer) or cookie. If no
     # token is present, redirect the browser to the login page.
     def _extract_raw_token(req: Request) -> str | None:
@@ -237,7 +239,12 @@ async def admin_page(request: Request) -> Any:
         # user sees that admin rights are required.
         return templates.TemplateResponse(
             "admin.html",
-            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            {
+                "request": request,
+                "orders": [],
+                "status_code": 403,
+                "message": "admin required",
+            },
             status_code=403,
         )
 
@@ -283,13 +290,20 @@ async def admin_approve(order_id: str, request: Request) -> Any:
     if not isinstance(claims, dict) or not claims.get("is_admin"):
         return templates.TemplateResponse(
             "admin.html",
-            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            {
+                "request": request,
+                "orders": [],
+                "status_code": 403,
+                "message": "admin required",
+            },
             status_code=403,
         )
 
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
-        await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers)
+        await client.post(
+            f"{ORDER_SERVICE_URL}/orders/{order_id}/approve", headers=headers
+        )
 
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -314,12 +328,19 @@ async def admin_reject(order_id: str, request: Request) -> Any:
     if not isinstance(claims, dict) or not claims.get("is_admin"):
         return templates.TemplateResponse(
             "admin.html",
-            {"request": request, "orders": [], "status_code": 403, "message": "admin required"},
+            {
+                "request": request,
+                "orders": [],
+                "status_code": 403,
+                "message": "admin required",
+            },
             status_code=403,
         )
 
     headers = {"Authorization": f"Bearer {raw_token}"}
     async with httpx.AsyncClient() as client:
-        await client.post(f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers)
+        await client.post(
+            f"{ORDER_SERVICE_URL}/orders/{order_id}/reject", headers=headers
+        )
 
     return RedirectResponse(url="/admin", status_code=303)
