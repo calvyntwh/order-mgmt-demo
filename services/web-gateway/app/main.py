@@ -3,13 +3,19 @@ import secrets
 from typing import Any, cast
 
 import httpx
+import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .auth_proxy import introspect
 
+from .observability import setup_logging, request_id_middleware
+
+
+setup_logging()
 app = FastAPI(title="web-gateway")
+app.middleware("http")(request_id_middleware)
 templates = Jinja2Templates(directory="app/templates")
 ORDER_SERVICE_URL = os.environ.get("ORDER_SERVICE_URL", "http://order-service:8002")
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", "http://auth-service:8001")
@@ -136,7 +142,7 @@ async def register(request: Request) -> Any:
     # Accept JSON or form data from browser
     try:
         data: Any = await request.json()
-    except Exception:
+    except json.JSONDecodeError:
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
@@ -153,7 +159,7 @@ async def register(request: Request) -> Any:
         else:
             try:
                 msg = r.json().get("detail", "Registration failed.")
-            except Exception:
+            except ValueError:
                 msg = "Registration failed."
             return templates.TemplateResponse(
                 "register.html", {"request": request, "message": msg}
@@ -164,7 +170,7 @@ async def register(request: Request) -> Any:
 async def login(request: Request) -> Any:
     try:
         data: Any = await request.json()
-    except Exception:
+    except json.JSONDecodeError:
         form = await request.form()
         data = {k: v for k, v in form.items()}
 
@@ -173,7 +179,7 @@ async def login(request: Request) -> Any:
         if r.status_code == 200:
             try:
                 token = r.json().get("access_token")
-            except Exception:
+            except ValueError:
                 token = None
             response = RedirectResponse(url="/orders", status_code=303)
             if token:
@@ -191,7 +197,7 @@ async def login(request: Request) -> Any:
                 # If upstream issued a refresh_token, persist it in an HttpOnly cookie
                 try:
                     refresh = r.json().get("refresh_token")
-                except Exception:
+                except ValueError:
                     refresh = None
                 if refresh:
                     response.set_cookie(
@@ -212,7 +218,7 @@ async def login(request: Request) -> Any:
         else:
             try:
                 msg = r.json().get("detail", "Login failed.")
-            except Exception:
+            except ValueError:
                 msg = "Login failed."
             return templates.TemplateResponse(
                 "login.html", {"request": request, "message": msg}
@@ -249,7 +255,7 @@ async def submit_order(request: Request) -> Any:
         r = await client.post(f"{ORDER_SERVICE_URL}/orders/", json=data, headers=headers)
         try:
             raw_err = r.json()
-        except Exception:
+        except ValueError:
             raw_err = None
         message = (
             "Order created successfully."
@@ -261,7 +267,7 @@ async def submit_order(request: Request) -> Any:
         r_orders = await client.get(f"{ORDER_SERVICE_URL}/orders/me", headers=headers)
         try:
             raw: Any = r_orders.json() if r_orders.status_code == 200 else []
-        except Exception:
+        except ValueError:
             raw = []
         orders = _normalize_list(raw)
         for o in orders:

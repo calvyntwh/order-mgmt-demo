@@ -75,7 +75,7 @@
     - References: OAuth2 refresh-token rotation patterns and Valkey session-store approaches; document trade-offs in `todo.md` and `docs/REVOCATION.md`.
     - Status: Done — Valkey-backed session store implemented, gateway logout wired to revoke sessions, and integration tests (Valkey test-double + concurrency) added. Test results (local): auth-service: 13 passed; order-service: 6 passed; web-gateway: 10 passed.
 
-- [ ] [5] Replace broad `except Exception` usage and add observability
+- [-] [5] Replace broad `except Exception` usage and add observability
   - Replace bare catches with narrow exceptions; log structured errors and stack traces.
   - Add request ID middleware and include IDs in logs and inter-service headers.
 
@@ -114,19 +114,11 @@
   - Add integration tests that exercise gateway→auth→order flows using test DB and migrations.
   - Add a CI job to run the integration suite.
 
-- [ ] [11] Server-side authorization enforcement
-  - Ensure order-service performs role checks server-side (do not rely solely on gateway).
- - [x] [11] Server-side authorization enforcement
+- [x] [11] Server-side authorization enforcement
    - Ensure order-service performs role checks server-side (do not rely solely on gateway).
    - Note: Implemented in `services/order-service/app/orders.py` (requires `get_current_user`/`require_admin` and per-endpoint checks).
 
-- [ ] [12] Structured logging, health, and metrics
-  - Keep it minimal for the demo: add basic `/health` and consistent structured log lines now; defer Prometheus/OTel instrumentation.
-  - Actions:
-    - Implement a lightweight `/health` (200 OK) and `/ready` endpoint in each service for the demo/runtime checks.
-    - Standardize a simple structured log line format (JSON or key=value) and ensure critical handlers include service, level, message, and request_id.
-    - Defer adding Prometheus `/metrics` endpoints and OTel tracing until post‑MVP.
- - [-] [12] Structured logging, health, and metrics
+- [-] [12] Structured logging, health, and metrics
    - Keep it minimal for the demo: add basic `/health` and consistent structured log lines now; defer Prometheus/OTel instrumentation.
    - Status: `/health` endpoint implemented in `web-gateway`, `auth-service`, and `order-service`; `/ready` and structured JSON logging (request-id propagation) remain TODO.
    - Actions:

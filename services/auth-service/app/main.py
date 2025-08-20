@@ -3,11 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .auth import router as auth_router
+from .observability import setup_logging, request_id_middleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import logging
+
+    # Initialize logging early so startup errors are captured in structured logs
+    setup_logging()
 
     try:
         # Validate critical runtime settings early
@@ -21,17 +25,20 @@ async def lifespan(app: FastAPI):
         await init_db_pool()
         await ensure_admin()
     except Exception as e:
-        logging.exception("Error during startup: %s", e)
+        logging.exception("Error during startup")
+        # re-raise so failing startup is visible to supervisors/CI
+        raise
     yield
     try:
         from .db import close_db_pool
 
         await close_db_pool()
     except Exception as e:
-        logging.exception("Error during shutdown: %s", e)
+        logging.exception("Error during shutdown")
 
 
 app = FastAPI(title="auth-service", lifespan=lifespan)
+app.middleware("http")(request_id_middleware)
 app.include_router(auth_router)
 
 
