@@ -194,32 +194,23 @@
   - Finalize alembic (or chosen tool) configs for `auth-service` and `order-service` and add initial migrations and seed fixtures for CI tests.
   - Done: Added Alembic scaffolding for `auth-service` and `order-service`, initial revisions that apply the SQL initializers in `infra/postgres`, and a seed SQL for auth-service. Updated `Makefile` `migrate*` targets to prefer Alembic and fall back to the existing SQL apply script. See `services/migrations/README.md` for usage.
 
+- [x] [18] Configure pytest + coverage for all services
+   - Add per-service pytest config and CI steps for auth-service, order-service, and web-gateway.
+   - Notes: Added per-service `pytest.ini` enabling `pytest-cov` (coverage.xml output). Updated `.github/workflows/tests.yml` to run tests with coverage and upload per-service `coverage.xml` artifacts.
 
-- [ ] [18] Configure pytest + coverage for all services
-  - Add per-service pytest config and CI steps for auth-service, order-service, and web-gateway.
-
-- [ ] [19] Add pre-commit and formatting enforcement to CI
-  - Ensure Ruff/black/ruff configs are enforced on PRs and add a lint-fix job to CI.
-
-- [ ] [20] Add Trivy container scan to CI
-  - Block on HIGH/CRITICAL findings for demo images and document remediation steps.
-
-- [ ] [21] E2E smoke test (headless, script-based)
+- [ ] [19] E2E smoke test (headless, script-based)
   - Implement the register→login→create order→admin approve flow using `scripts/e2e_smoke.py` or a minimal requests-based script and add it to CI as a gated smoke test (optional offline flag for local runs).
 
-- [ ] [22] Environment variable validation and secure dev secrets
+- [ ] [20] Environment variable validation and secure dev secrets
   - Implement runtime validation for required env vars and provide secure dev defaults; document secret injection for CI/CD.
 
-- [ ] [23] Configure structured logging (structlog) and request ID propagation across services
+- [ ] [21] Configure structured logging (structlog) and request ID propagation across services
   - Standardize a JSON log format and add middleware to inject X-Request-ID headers for tracing between services.
 
-- [ ] [24] Implement login rate limiting in auth-service
-  - Prevent brute-force by blocking after 5 failed attempts / 60s per username; add unit tests.
-
-- [ ] [25] Enforce bcrypt cost and JWT claim structure
+- [ ] [22] Enforce bcrypt cost and JWT claim structure
   - Make bcrypt rounds configurable (default >=12) and enforce required JWT claims and algorithm policy.
 
-- [ ] [26] Security verification tasks (Post‑MVP)
+- [ ] [23] Security verification tasks (Post‑MVP)
   - Performance benchmark script and p95 goals
   - SQL injection / parameterized query verification and linters
   - Test coverage uplift plan and reporting

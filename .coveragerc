@@ -1,0 +1,10 @@
+[run]
+omit =
+    tests/*
+    services/*/tests/*
+
+[report]
+exclude_lines =
+    if __name__ == .__main__.:True
+    pragma: no cover
+    @dataclass
