@@ -1,0 +1,3 @@
+/* Small local styles to replace inline styles flagged by djlint H021 */
+.inline-form { display: inline; }
+.pw-progress { width: 100%; margin-top: 6px; }
