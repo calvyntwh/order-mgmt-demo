@@ -216,8 +216,19 @@
 
   - Status: Done — added `scripts/validate_env.py` and `docs/ENVIRONMENT.md`; updated CI guidance in docs and marked this task complete in the tracker.
 
-- [ ] [21] Configure structured logging (structlog) and request ID propagation across services
-  - Standardize a JSON log format and add middleware to inject X-Request-ID headers for tracing between services.
+- [x] [21] Configure structured logging (structlog) and request ID propagation across services
+  - Standardize a JSON log format and add middleware to inject `X-Request-ID` headers for tracing between services.
+
+  - Notes & acceptance criteria (doc-backed):
+    - Standardize structured logging (JSON) across services and bind a per-request `request_id` into `structlog` contextvars.
+    - Add an HTTP middleware that ensures each response contains `X-Request-ID` (generate one if missing) and bind it into `request.state`.
+    - Provide a small helper `inject_request_id_headers(headers, request)` that returns outbound headers with `X-Request-ID` when available; ensure all existing outbound `httpx` calls use this helper.
+    - Tests: unit tests assert `X-Request-ID` appears on responses and that structlog binding does not raise; integration/smoke tests exercise header propagation end-to-end.
+
+  - Status: Done — implemented and wired in services.
+    - Files touched: `services/*/app/observability.py` (logging setup, middleware, helper), `services/order-service/app/auth_client.py` (injects request id on introspect), `services/web-gateway/app/main.py` & `app/routes.py` (use helper before outbound calls).
+    - Tests: `services/*/tests/test_request_id_header.py` and `services/*/tests/test_structlog_binding.py` validate behavior; unit tests run locally and pass.
+
 
 - [ ] [22] Enforce bcrypt cost and JWT claim structure
   - Make bcrypt rounds configurable (default >=12) and enforce required JWT claims and algorithm policy.
