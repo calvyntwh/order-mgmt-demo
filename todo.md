@@ -230,8 +230,19 @@
     - Tests: `services/*/tests/test_request_id_header.py` and `services/*/tests/test_structlog_binding.py` validate behavior; unit tests run locally and pass.
 
 
-- [ ] [22] Enforce bcrypt cost and JWT claim structure
-  - Make bcrypt rounds configurable (default >=12) and enforce required JWT claims and algorithm policy.
+- [x] [22] Enforce bcrypt cost and JWT claim structure
+  - Make bcrypt rounds configurable and enforce required JWT claims and algorithm policy.
+
+  - Notes & acceptance criteria (doc-backed):
+    - BCRYPT_ROUNDS is configurable via env and `settings.validate()` will fail startup in non-development environments when the configured rounds are below a safe minimum (`MIN_BCRYPT_ROUNDS`, default 12).
+    - JWT signing algorithm must be an allowed algorithm (eg. `HS256`, `HS512`) in non-development environments; startup will fail for disallowed algorithms.
+    - Token decoding enforces presence of required claims (`sub`, `exp`) and rejects tokens missing these claims.
+    - Tests: unit tests assert `settings.validate()` fails when `BCRYPT_ROUNDS` is too low with `ENV=production`, and introspection/token endpoints reject tokens missing required claims.
+
+  - Status: Done — implemented in auth-service.
+    - Files changed: `services/auth-service/app/settings.py` (enforce MIN_BCRYPT_ROUNDS and allowed JWT_ALGORITHM), `services/auth-service/app/auth.py` (use settings for algorithm, validate required claims on decode, use settings for token creation), and `scripts/validate_env.py` already checks `BCRYPT_ROUNDS` in CI mode.
+    - Tests: `services/auth-service/tests/test_settings.py`, `services/auth-service/tests/test_introspect.py`, and `services/auth-service/tests/test_logout_revocation.py` cover the behavior; run unit tests to verify.
+
 
 - [ ] [23] Security verification tasks (Post‑MVP)
   - Performance benchmark script and p95 goals

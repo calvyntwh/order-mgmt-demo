@@ -69,8 +69,18 @@ def _decode_token(token: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail="token revoked")
     try:
         secret = os.getenv("JWT_SECRET", "dev-secret")
-        alg = os.getenv("JWT_ALGORITHM", "HS256")
-        return jwt.decode(token, secret, algorithms=[alg])
+        alg = getattr(settings, "JWT_ALGORITHM", os.getenv("JWT_ALGORITHM", "HS256"))
+        payload = jwt.decode(token, secret, algorithms=[alg])
+        # enforce presence of required claims
+        if "sub" not in payload:
+            raise HTTPException(
+                status_code=401, detail="invalid token: missing sub claim"
+            )
+        if "exp" not in payload:
+            raise HTTPException(
+                status_code=401, detail="invalid token: missing exp claim"
+            )
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="token expired")
     except jwt.InvalidTokenError:
@@ -193,8 +203,9 @@ async def refresh(payload: dict[str, str]) -> dict[str, Any]:
 
 
 async def _hash_password(password: str) -> str:
-    # Use configured bcrypt rounds (work factor). Default is a low value for
-    # fast local development; set BCRYPT_ROUNDS>=12 in production.
+    # Use configured bcrypt rounds (work factor). Default is a low value for fast
+    # local development; `settings.validate()` enforces a higher MIN_BCRYPT_ROUNDS
+    # for non-development environments.
     rounds = getattr(settings, "BCRYPT_ROUNDS", 4)
     hashed: bytes = await __to_thread(
         bcrypt.hashpw,
@@ -223,6 +234,7 @@ def _verify_password(password: str, hashed: str) -> bool:
 
 def create_token(sub: str, username: str, is_admin: bool) -> str:
     secret: str = os.getenv("JWT_SECRET", "dev-secret")
+    alg: str = getattr(settings, "JWT_ALGORITHM", os.getenv("JWT_ALGORITHM", "HS256"))
     exp: int = int(time.time()) + int(os.getenv("JWT_EXPIRE_SECONDS", "900"))
     payload: dict[str, Any] = {
         "sub": sub,
@@ -230,7 +242,7 @@ def create_token(sub: str, username: str, is_admin: bool) -> str:
         "is_admin": is_admin,
         "exp": exp,
     }
-    return jwt.encode(payload, secret, algorithm=os.getenv("JWT_ALGORITHM", "HS256"))
+    return jwt.encode(payload, secret, algorithm=alg)
 
 
 @router.get("/introspect")
