@@ -65,6 +65,20 @@ test:
 	cd services/$(SERVICE) && PYTHONPATH=./ uv run pytest
 
 
+.PHONY: migrate migrate-auth migrate-order
+migrate:
+	@echo "Run both auth and order SQL initializers against DATABASE_URL"
+	python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql infra/postgres/init-orders.sql
+
+migrate-auth:
+	@echo "Apply auth DB init SQL"
+	python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql
+
+migrate-order:
+	@echo "Apply order DB init SQL"
+	python3 scripts/apply_migrations.py --files infra/postgres/init-orders.sql
+
+
 .PHONY: test-mark-todo
 test-mark-todo:
 	@echo "Running mark_todo tests from repo root (uses 'uv run')"
