@@ -151,7 +151,9 @@
 
 - [x] [11] Server-side authorization enforcement
    - Ensure order-service performs role checks server-side (do not rely solely on gateway).
-   - Note: Implemented in `services/order-service/app/orders.py` (requires `get_current_user`/`require_admin` and per-endpoint checks).
+  - Implementation: `services/order-service/app/orders.py` enforces owner/admin checks via `get_current_user` and `require_admin` dependencies.
+  - Tests: `services/order-service/tests/test_authz.py` — new unit tests added to assert 403 for non-admins (list_user_orders and get_order ownership checks). Tests also save/restore `app.dependency_overrides` per-test to avoid leaking overrides between tests.
+  - Verified: ran workspace lint + tests (auth-service, order-service, web-gateway) locally; all service test suites passed.
 
 - [-] [12] Structured logging, health, and metrics
    - Keep it minimal for the demo: add basic `/health` and consistent structured log lines now; defer Prometheus/OTel instrumentation.
