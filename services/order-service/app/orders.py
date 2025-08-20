@@ -73,7 +73,7 @@ async def _execute_fetchall(
     if hasattr(pool, "acquire"):
         async with pool.acquire() as conn:
             if hasattr(conn, "fetchall"):
-                return await conn.fetchall()
+                return await conn.fetchall(sql, params)
             async with conn.cursor() as cur:
                 await cur.execute(sql, params)
                 return await cur.fetchall()

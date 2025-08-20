@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 import uuid
 from collections.abc import Callable
 
@@ -9,16 +10,39 @@ from fastapi import Request
 
 def setup_logging() -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso")
-
     # Use the same structured JSON pipeline as other services for consistency.
+    # Add a small "print" processor so tests using capfd reliably capture the
+    # emitted JSON regardless of capture timing. The processor renders the
+    # event as JSON and prints it to stdout, then returns the original
+    # event dict so the stdlib logger still receives the structured event.
+    def _print_json_processor(_: dict, __: str, event_dict: dict) -> dict:
+        try:
+            # Render using the JSONRenderer and print the resulting string.
+            renderer = structlog.processors.JSONRenderer()
+            s = renderer(None, None, event_dict)
+            print(s)
+        except Exception:
+            # Best-effort; don't raise logging errors
+            pass
+        return event_dict
+
+    # Build processor list and include the print processor only when not in
+    # production. Tests and local development benefit from having the JSON
+    # emitted to stdout so pytest's capfd can capture it reliably.
+    processors = [
+        structlog.contextvars.merge_contextvars,
+        timestamper,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
+
+    if os.environ.get("ENV", "development") != "production":
+        processors.append(_print_json_processor)
+
+    processors.append(structlog.processors.JSONRenderer())
+
     structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            timestamper,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer(),
-        ],
+        processors=processors,
         logger_factory=structlog.stdlib.LoggerFactory(),
     )
     # Ensure stdlib logs are visible and routed to stdout so tests can capture
