@@ -37,8 +37,11 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/order_mgmt
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - VALKEY_URL=valkey://valkey:6379/0
     depends_on:
       postgres:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     ports:
       - "8001:8001"

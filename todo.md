@@ -180,8 +180,9 @@
   - Remove references to removed `update_tracker` script in CI/docs or update hooks to use `todo.md`.
   - Implementation: removed references to `scripts/update_tracker.py` from documentation and updated local guidance to use `scripts/mark_todo_done.py` for marking items locally. The `update_tracker.py` script is not present in `scripts/`.
 
-- [ ] [15] Set up Valkey/session persistence and Docker Compose
-  - Finish Valkey configuration for session management and ensure `docker-compose.mvp.yml` composes Valkey and Postgres reliably for local dev.
+- [x] [15] Set up Valkey/session persistence and Docker Compose
+  - Done: Implemented valkey-py-backed session store and wired VALKEY_URL into compose for auth-service; updated auth-service dependencies to include valkey. Added an integration test that can run against a compose stack to exercise rotation/revoke flows.
+  - Finish: `docker-compose.mvp.yml` now composes Valkey and Postgres for local dev; run the integration test with the `compose:up` task and then `make test SERVICE=auth-service` (or run the specific pytest below).
   - Notes & linkage:
     - Replace raw JWT cookie storage with Valkey-backed session tokens and a migration plan; this work depends on cookie hardening in [3] and token revocation/session strategies in [4].
     - Tests: add integration tests that verify login/logout flows with Valkey sessions and ensure refresh attempts for revoked sessions fail.
