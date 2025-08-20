@@ -107,6 +107,10 @@ test-mark-todo:
 	@echo "Running mark_todo tests from repo root (uses 'uv run')"
 	PYTHONPATH=. uv run pytest tests/test_mark_todo_done.py
 
+env-validate:
+	@echo "Validating environment variables (non-CI mode)"
+	python3 scripts/validate_env.py || true
+
 typecheck:
 	cd services/$(SERVICE) && uv run basedpyright .
 

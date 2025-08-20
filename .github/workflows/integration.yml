@@ -32,6 +32,10 @@ jobs:
         run: |
           docker compose -f docker-compose.mvp.yml up -d --build
 
+      - name: Validate environment (CI)
+        run: |
+          python3 scripts/validate_env.py --ci
+
       - name: Wait for services
         run: |
           # wait for health endpoints
@@ -48,7 +52,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/order_mgmt
         run: |
-          python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql infra/postgres/init-orders.sql
+          python3 scripts/apply_migrations.py --files infra/postgres/init-auth.sql infra/postgres/init-orders.sql infra/postgres/seed-admin.sql
 
       - name: Run integration tests
         env:
