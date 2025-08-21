@@ -30,6 +30,9 @@ PATTERNS = [
 def scan(root: Path) -> int:
     findings = []
     for p in root.rglob("*.py"):
+        # Skip scanning the sql_safety_check.py script itself to avoid false positives
+        if p.name == "sql_safety_check.py":
+            continue
         try:
             text = p.read_text()
         except Exception:

@@ -1,6 +1,6 @@
 # Makefile for MVP workflows
 
-.PHONY: up down logs logs-follow smoke build lint test smoke-local format lint-fix typecheck coverage djlint djlint-fix
+.PHONY: up down logs logs-follow smoke build lint test smoke-local format lint-fix typecheck coverage djlint djlint-fix secrets-check
 
 SERVICE ?= auth-service
 
@@ -110,6 +110,14 @@ test-mark-todo:
 env-validate:
 	@echo "Validating environment variables (non-CI mode)"
 	python3 scripts/validate_env.py || true
+
+secrets-check:
+	@echo "Scanning for hardcoded secrets and passwords..."
+	python3 scripts/secrets_check.py
+
+secrets-check-all:
+	@echo "Scanning for hardcoded secrets and passwords (including test files)..."
+	python3 scripts/secrets_check.py --include-tests
 
 typecheck:
 	cd services/$(SERVICE) && uv run basedpyright .

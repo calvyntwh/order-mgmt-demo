@@ -108,6 +108,23 @@ Or run the combined test task (via the provided VS Code task `test:all` or the M
 make test SERVICE=auth-service && make test SERVICE=order-service && make test SERVICE=web-gateway
 ```
 
+## Security & Validation
+
+The repository includes several security and validation tools:
+
+```bash
+# Check for hardcoded secrets and passwords
+make secrets-check
+
+# Validate environment configuration
+make env-validate
+
+# Scan for SQL injection patterns
+python3 scripts/sql_safety_check.py
+```
+
+See `docs/SECURITY_VERIFICATION.md` for detailed security verification steps and `SECURITY_AUDIT.md` for findings summary.
+
 ## Development tips
 
 - Use the per-service virtual environment or container for running and debugging.

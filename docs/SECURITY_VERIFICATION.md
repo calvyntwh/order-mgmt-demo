@@ -31,7 +31,32 @@ If findings appear, review the files and change to parameterized queries using
 psycopg pool parameterization or SQLModel/SQLAlchemy bound parameters.
 
 
-## 3) Coverage uplift plan
+## 3) Secrets and password scanning
+
+Run the repository secrets scanner to identify hardcoded secrets, passwords, and 
+other sensitive information:
+
+```bash
+# Quick scan (excludes test files)
+make secrets-check
+
+# Comprehensive scan (includes test files)  
+make secrets-check-all
+
+# Or run directly
+./scripts/secrets_check.py
+./scripts/secrets_check.py --include-tests
+```
+
+The scanner identifies three severity levels:
+- **HIGH**: Hardcoded secrets that should be fixed immediately (e.g., `dev-secret`)
+- **MEDIUM**: Embedded credentials or weak passwords worth reviewing
+- **LOW**: Base64-like strings or patterns that may be secrets
+
+Focus on fixing HIGH severity findings before production deployment.
+
+
+## 4) Coverage uplift plan
 
 Goal: increase branch/statement coverage to 80% across services. Suggested plan:
 
@@ -49,7 +74,7 @@ CI step (example):
 ```
 
 
-## 4) Curl examples and quick manual checks (for reviewers)
+## 5) Curl examples and quick manual checks (for reviewers)
 
 Register, login, create an order, and fetch orders (assumes services on localhost):
 
@@ -70,13 +95,14 @@ curl -b cookies.txt http://localhost:8000/orders
 For admin approve flows, ensure an admin user exists or seed one before running.
 
 
-## 5) Automated linters & static checks
+## 6) Automated linters & static checks
 
 - Run `uv run ruff check . --fix` across services before merging security changes.
+- Run `make secrets-check` to scan for hardcoded secrets and passwords.
 - Consider adding `bandit` or `semgrep` for deeper checks as a follow-up.
 
 
-## 6) Reporting & follow-ups
+## 7) Reporting & follow-ups
 
 - If you want, I can add a CI job that runs `scripts/benchmark.py` against a
   deployed preview environment and fails if p95 exceeds thresholds.
