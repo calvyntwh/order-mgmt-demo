@@ -1,49 +1,54 @@
-FROM python:3.13.6-slim
-
-# Install UV from official image (pinned tag for reproducible builds)
-# NOTE: for maximum reproducibility replace the tag with a digest (sha256:...)
-# Patch OS packages (reduce known CVEs like zlib) and install curl for health checks
-# This upgrades packages from the base image to the latest available in the distro
+# Multi-stage Dockerfile: keep build tools only in the builder stage to shrink final image
+FROM python:3.13.6-slim AS builder
 ENV UV_INSTALL_DIR=/usr/local/bin
 ENV PATH=/usr/local/bin:$PATH
 ARG UV_VERSION=0.8.12
+
+# Install build deps, install uv system-wide and run uv sync to install project deps
+# Install build deps and uv after copying pyproject.toml so `uv sync` can find project files
+
+WORKDIR /build
+COPY pyproject.toml uv.lock ./
+
+# Install build deps, install uv system-wide and run uv sync
 RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
-  && apt-get install -y --no-install-recommends curl ca-certificates libpq5 \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    curl ca-certificates libpq-dev \
   && curl -fsSL https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh -s -- $UV_VERSION \
-  && rm -rf /var/lib/apt/lists/*
+  && uv sync --frozen --no-cache \
+  && rm -rf /var/lib/apt/lists/* /build/.venv
 
-# Non-root user for security
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+WORKDIR /app
+COPY . /app
+RUN rm -rf /app/.venv && chown -R 1000:1000 /app /usr/local
 
-# Ensure a writable home and cache directory for the non-root user so `uv` can
-# create its cache under $HOME/.cache without permission errors.
-RUN mkdir -p /home/appuser/.cache \
-  && chown -R appuser:appgroup /home/appuser
+# Final runtime image: copy only installed /usr/local and app files
+FROM python:3.13.6-slim AS runtime
+ENV PATH=/usr/local/bin:$PATH
 ENV HOME=/home/appuser
 ENV XDG_CACHE_HOME=/home/appuser/.cache
 
-# Copy the application into the container
+# Create non-root user and home
+RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -s /sbin/nologin appuser \
+  && mkdir -p /home/appuser/.cache \
+  && chown -R appuser:appgroup /home/appuser
 
-# Use app directory and copy dependency manifests first for better layer caching
-WORKDIR /app
-COPY pyproject.toml uv.lock ./
-# Install dependencies from lockfile
-RUN uv sync --frozen --no-cache
+# Copy installed system files and app from builder
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /app /app
 
-# Now copy the rest of the application
-COPY . /app
+# Minimal runtime OS deps
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates libpq5 \
+  && rm -rf /var/lib/apt/lists/* \
+  && chown -R appuser:appgroup /app
 
-# Set permissions
-RUN chown -R appuser:appgroup /app
 USER appuser
+WORKDIR /app
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8001/health || exit 1
 
 EXPOSE 8001
 
-# Run the app via system python + uvicorn (works regardless of venv path)
-# Use module form so the installed uvicorn entrypoint is invoked from site-packages
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
