@@ -1,14 +1,10 @@
 from typing import Any
 
 import httpx
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest_types import MonkeyPatch
 
-from app.routes import router as routes_router
-
-app = FastAPI()
-app.include_router(routes_router)
+from app.main import app
 
 
 def test_whoami(monkeypatch: MonkeyPatch) -> None:

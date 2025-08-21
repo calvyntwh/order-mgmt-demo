@@ -1,5 +1,3 @@
-
-
 def test_validate_fails_with_default_dev_secret(monkeypatch):
     monkeypatch.setenv("ENV", "production")
     # ensure default dev-secret is present

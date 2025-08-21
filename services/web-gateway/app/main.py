@@ -18,6 +18,7 @@ from .observability import (
 from .schemas import OrderForm
 from .security import (
     build_auth_headers_from_request,
+    get_current_user,
     get_current_user_optional,
 )
 
@@ -87,6 +88,10 @@ async def _verify_csrf(request: Request, form: dict | None) -> bool:
 
     # Accept both plain dicts and FormData-like objects that implement .get()
     cookie_tok = request.cookies.get("csrf_token")
+    # Allow header-based CSRF tokens for HTMX requests (client injects header)
+    header_tok = request.headers.get("X-CSRF-Token")
+    if header_tok and cookie_tok and header_tok == cookie_tok:
+        return True
     form_tok = None
     try:
         if isinstance(form, dict):
@@ -146,6 +151,16 @@ async def ready():
     it has completed import-time initialization (templates available)."""
     # The gateway has no async startup tasks; return ready
     return {"status": "ready", "service": "web-gateway"}
+
+
+@app.get("/whoami")
+async def whoami(request: Request) -> dict[str, Any]:
+    # Validate token and return claims; raises 401 on invalid/missing token
+    payload = await get_current_user(request)
+    if not isinstance(payload, dict):
+        return {}
+    payload_typed = cast(dict[str, Any], payload)
+    return {str(k): v for k, v in payload_typed.items()}
 
 
 @app.get("/")
@@ -337,8 +352,11 @@ async def orders_page(request: Request) -> Any:
     headers = await build_auth_headers_from_request(request)
     async with httpx.AsyncClient() as client:
         headers = inject_request_id_headers(headers, request)
-        r = await client.get(f"{ORDER_SERVICE_URL}/me", headers=headers)
-        raw_payload: Any = r.json() if r.status_code == 200 else []
+        r = await client.get(f"{ORDER_SERVICE_URL}/orders/me", headers=headers)
+        try:
+            raw_payload: Any = r.json() if r.status_code == 200 else []
+        except ValueError:
+            raw_payload = []
     orders = _normalize_list(raw_payload)
     for o in orders:
         oid = o.get("id")
